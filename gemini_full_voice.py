@@ -139,7 +139,7 @@ def main():
   pos=c["start"];duration=c["end"]-c["start"]
   for g,w in zip(groups,spans):
    end=pos+duration*w/weight
-   subtitles.append(f"{n}\\n{timestamp(pos)} --> {timestamp(end)}\\n{g}\\n\\n")
+   subtitles.append(f"{n}\n{timestamp(pos)} --> {timestamp(end)}\n{g}\n\n")
    pos=end;n+=1
  srt="".join(subtitles)
  (ROOT/"urdu_timed_gemini_review.srt").write_text(srt,encoding="utf-8-sig")
