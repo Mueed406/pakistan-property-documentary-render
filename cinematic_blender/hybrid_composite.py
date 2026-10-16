@@ -42,14 +42,15 @@ def compose(source,clips,cues,out):
    matched[k]=(min(duration-7,matched[k-1][0]+12),matched[k][1],matched[k][2])
  cmd=["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(source)]
  for t,f,_ in matched:
-  cmd+=["-itsoffset",str(round(t,3)),"-i",str(f)]
+  cmd+=["-i",str(f)]
  n=0
  labels="[0:v]"
  filters=[]
  for i,(t,f,name) in enumerate(matched):
   overlay=f"[p{i}]";output=f"[m{i}]"
-  filters.append(f"[{i+1}:v]fps=25,scale=1480:832:flags=lanczos,format=yuva420p,"
-    f"fade=t=in:st=0:d=0.45:alpha=1,fade=t=out:st=4.2:d=0.7:alpha=1{overlay}")
+  filters.append(f"[{i+1}:v]setpts=PTS-STARTPTS,fps=25,scale=1480:832:flags=lanczos,format=yuva420p,"
+    f"fade=t=in:st=0:d=0.45:alpha=1,fade=t=out:st=4.2:d=0.7:alpha=1,"
+    f"setpts=PTS+{round(t,3)}/TB{overlay}")
   # The source is STILL moving on the left and around the 3D reconstruction.
   filters.append(f"{labels}{overlay}overlay=x=360:y=112:"
     f"eof_action=pass:repeatlast=0:shortest=0{output}")
