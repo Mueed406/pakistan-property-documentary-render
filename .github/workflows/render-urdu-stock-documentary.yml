@@ -32,14 +32,12 @@ jobs:
         run: python free_voice.py --engine piper
       - name: Download actual HD stock MP4 clips
         run: python documentary_editor.py download
+      - name: Generate original instrumental soundtrack (public-domain composition)
+        run: python original_score.py --voice urdu_voice.wav --output licensed_score.wav
       - name: Render original real-footage documentary
         run: |
-          if [ -f licensed_score.mp3 ]; then
-            python documentary_editor.py render --voice urdu_voice.wav --subtitles urdu_timed.srt --music licensed_score.mp3
-          else
-            echo 'No licensed score supplied; rendering voice-first video without unlicensed music.'
-            python documentary_editor.py render --voice urdu_voice.wav --subtitles urdu_timed.srt
-          fi
+          test -s licensed_score.wav
+          python documentary_editor.py render --voice urdu_voice.wav --subtitles urdu_timed.srt --music licensed_score.wav
       - name: Validate MP4, audio and dimensions
         run: python documentary_editor.py qc --file renders/Pakistan_Property_Stock_Documentary_FINAL.mp4
       - name: Upload downloadable documentary artifact for manual review
@@ -50,6 +48,7 @@ jobs:
             renders/Pakistan_Property_Stock_Documentary_FINAL.mp4
             urdu_timed.srt
             renders/edit_decisions.json
+            LICENSE_SCORE.md
           if-no-files-found: error
           retention-days: 7
       - name: Upload troubleshooting report if the render fails

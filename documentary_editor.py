@@ -62,7 +62,7 @@ def render(args):
  if not voice.is_file():raise SystemExit('STOP: natural Urdu voice WAV/MP3 absent. No robotic TTS substitutions.')
  if not args.subtitles or not Path(args.subtitles).is_file():raise SystemExit('STOP: synchronized Urdu .srt subtitles absent. Do not reuse unaligned subtitles.')
  tracks=media_seconds(voice)
- if tracks<60 or tracks>700:raise SystemExit('Suspicious narration length. Expected 6–9 minutes, got %.1fs'%tracks)
+ if not (360 <= tracks <= 425): raise SystemExit('DURATION QC FAILED: documentary must contain 360–425 sec of actual narrated content; got %.1fs. Revise script and regenerate voice; never pad with filler.'%tracks)
  rows=get_rows(); verified=[]
  for item in rows:
   v=FOOTAGE/(item['id']+'.mp4')
@@ -87,17 +87,17 @@ def render(args):
   for label,frac,cats in acts:
    z+=frac
    if ratio<z:break
-  avail=[r for r in verified if r['category'] in cats and r['id'] not in last[-9:]]
+  avail=[r for r in verified if r['category'] in cats and r['id'] not in last[-6:]]
   if not avail:avail=[r for r in verified if r['category'] in cats] or verified
-  avail.sort(key=lambda r:(r['id'] in last[-12:],r['duration']<8.0, rng.random()))
-  item=avail[0];span=min(7.5 if label!='investigation' else 6.2,tracks-ti,item['duration']-.2)
+  avail.sort(key=lambda r:(r['id'] in last[-8:],r['duration']<8.0, rng.random()))
+  item=avail[0];span=min(5.3 if label!='investigation' else 4.8,tracks-ti,item['duration']-.2)
   if span<3:span=min(tracks-ti,4.0);item=next((r for r in verified if r['duration']>6),item)
   span=max(.1,span)
   start=max(0.0, rng.uniform(0,max(0,item['duration']-span-.2)))
   shots.append(dict(id=item['id'],description=item['description'],category=label,source=str(item['file']),start=round(start,2),duration=round(span,2),from_time=round(ti,2)))
   last.append(item['id']);ti+=span
  (OUT/'edit_decisions.json').write_text(json.dumps(shots,indent=2,ensure_ascii=False),encoding='utf-8')
- print('Selected',len(shots),'moving HD shots, narration',round(tracks,1),'s')
+ print('Selected',len(shots),'moving HD shots from',len(set(x['id'] for x in shots)),'distinct verified real sources, narration',round(tracks,1),'s')
  fns=[]
  for i,s in enumerate(shots):
   output=OUT/f'seg_{i:03d}.mp4';fns.append(output)
@@ -131,7 +131,7 @@ def render(args):
 def qc(args):
  p=Path(args.file);info=probe(p);v=[x for x in info['streams'] if x['codec_type']=='video'];a=[x for x in info['streams'] if x['codec_type']=='audio'];d=float(info['format']['duration'])
  result={'path':str(p),'duration_seconds':d,'video':bool(v),'audio':bool(a),'width':v[0]['width'] if v else 0,'height':v[0]['height'] if v else 0,'size_bytes':p.stat().st_size}
- print(json.dumps(result,indent=2));valid=(result['video'] and result['audio'] and result['width']>=1920 and result['height']>=1080 and d>60);sys.exit(0 if valid else 2)
+ print(json.dumps(result,indent=2));valid=(result['video'] and result['audio'] and result['width']>=1920 and result['height']>=1080 and 359<=d<=428);sys.exit(0 if valid else 2)
 
 if __name__=='__main__':
  parser=argparse.ArgumentParser(description=__doc__);sub=parser.add_subparsers(dest='action',required=True)

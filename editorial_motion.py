@@ -3,7 +3,7 @@
 No fabricated footage or 3D. Use source-accurate reported figures and disclaimers.
 """
 from pathlib import Path
-import sys
+import sys,json
 ROOT=Path(__file__).resolve().parent
 
 def tc(t):
@@ -46,8 +46,16 @@ Style: Disclaimer,Noto Naskh Arabic,40,&H00FFFFFF,&H00FFFFFF,&H00303030,&HA00000
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 '''
- for st,en,style,label,x,y in marks:
-  a=round(total*st,2);b=round(total*en,2)
+ cues=[]
+ f=ROOT/'voice_cue_times.json'
+ if f.exists():
+  try:cues=json.loads(f.read_text(encoding='utf-8'))
+  except Exception:cues=[]
+ keywords=['فرض کیجیے','بیالیس ہزار','چھ ہزار','الزامات','رپورٹس میں','رجسٹریشن','پہلا قدم','دوسرا قدم','تیسرا قدم','چوتھا قدم','پاکستان پراپرٹی گروپ']
+ for idx,(st,en,style,label,x,y) in enumerate(marks):
+  match=next((c for c in cues if keywords[idx] in c.get('text','')),None)
+  a=round(max(0,match['start']-.2) if match else total*st,2)
+  b=round(min(total,a+(7 if style=='Headline' else 5.5)) if match else total*en,2)
   # Motion is minimal: 22px vertical rise over .45s and a short fade, not a presentation-style graphic.
   motion=r'{\move('+f'{x},{y+22},{x},{y},0,470'+r')\fad(300,300)}'
   content+=f'Dialogue: 0,{tc(a)},{tc(b)},{style},,0,0,0,,{motion}{esc(label)}\n'
