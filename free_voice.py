@@ -6,6 +6,7 @@ No speech is relabelled as human narration. Voice files are generated ONLY from 
 import argparse, asyncio, json, os, re, shutil, subprocess, sys
 from pathlib import Path
 import wave, contextlib
+from xml.sax.saxutils import escape as xml_escape
 ROOT=Path(__file__).resolve().parent
 SCRIPT=ROOT/'Pakistani_Urdu_Narration.txt'
 VOICE=ROOT/'urdu_voice.wav'; CAPTIONS=ROOT/'urdu_timed.srt'
@@ -65,7 +66,12 @@ def piper_setup():
   if not file.exists():
    print('Downloading free Urdu Piper voice',file.name,flush=True)
    fetch(base+file.name,file)
- return models/'ur_PK-fasih-medium.onnx',models/'ur_PK-fasih-medium.onnx.json'
+ # Reduce excessive prosody/noise variation (tuning experiment, not naturalness guarantee).
+ cfg=models/'ur_PK-fasih-medium.onnx.json'
+ settings=json.loads(cfg.read_text(encoding='utf-8'))
+ settings.setdefault('inference',{}).update({'noise_scale':0.50,'noise_w':0.42,'length_scale':1.0})
+ cfg.write_text(json.dumps(settings,ensure_ascii=False),encoding='utf-8')
+ return models/'ur_PK-fasih-medium.onnx',cfg
 
 async def make_edge(segs,where,rate):
  import edge_tts
@@ -87,6 +93,31 @@ def make_piper(segs,where):
    call([executable,'--model',str(model),'--config',str(config),'--output_file',str(dest)],(line+'\n').encode('utf-8'))
    if dest.stat().st_size<2000:raise RuntimeError(f'Piper made empty audio {n}')
   print('VOICE',n+1,'/',len(segs),flush=True)
+
+
+def make_azure(segs,where):
+ """Authorized Azure Speech F0 neural TTS. Requires AZURE_SPEECH_KEY and AZURE_SPEECH_REGION."""
+ import requests,time
+ key=os.environ.get('AZURE_SPEECH_KEY','').strip()
+ region=os.environ.get('AZURE_SPEECH_REGION','').strip()
+ if not key or not region:raise RuntimeError('Azure F0 key and region required. Do not insert tokens into source.')
+ if not re.fullmatch(r'[a-z0-9-]+',region):raise RuntimeError('Invalid Azure region.')
+ endpoint=f'https://{region}.tts.speech.microsoft.com/cognitiveservices/v1'
+ headers={'Ocp-Apim-Subscription-Key':key,'Content-Type':'application/ssml+xml',
+          'X-Microsoft-OutputFormat':'riff-24khz-16bit-mono-pcm',
+          'User-Agent':'PakistanPropertyGroup/1.0'}
+ for n,line in enumerate(segs):
+  output=where/f'speech_{n:03}.wav'
+  if output.exists() and output.stat().st_size>2000:continue
+  ssml=f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="ur-PK"><voice name="ur-PK-AsadNeural"><prosody rate="-3%">{xml_escape(line)}</prosody></voice></speak>'
+  for retry in range(3):
+   r=requests.post(endpoint,headers=headers,data=ssml.encode('utf-8'),timeout=90)
+   if r.status_code in (429,500,503) and retry<2:
+    time.sleep(5*(retry+1));continue
+   r.raise_for_status()
+   if not r.content.startswith(b'RIFF'):raise RuntimeError('Azure returned non-WAV audio')
+   output.write_bytes(r.content);break
+  print('AZURE UR-PK',n+1,'/',len(segs),flush=True)
 
 def make_fish(segs,where):
  import requests
@@ -124,11 +155,12 @@ def assemble(segs,where,pause):
  if t<260 or t>660:print('QUALITY WARNING: narration duration differs significantly from the intended 6-8 minute story. Review voice settings and pace.',file=sys.stderr)
 
 if __name__=='__main__':
- a=argparse.ArgumentParser(description=__doc__);a.add_argument('--engine',choices=['piper','edge','fish'],default='piper');a.add_argument('--pause',type=float,default=.23);a.add_argument('--rate',default='-6%',help='For Edge online neural voice, e.g. -6%')
+ a=argparse.ArgumentParser(description=__doc__);a.add_argument('--engine',choices=['piper','edge','fish','azure'],default='piper');a.add_argument('--pause',type=float,default=.23);a.add_argument('--rate',default='-6%',help='For Edge online neural voice, e.g. -6%')
  args=a.parse_args();where=ROOT/'voice_segments'/args.engine;where.mkdir(parents=True,exist_ok=True)
  segs=segments(SCRIPT.read_text(encoding='utf-8-sig'))
  print('Urdu sentences',len(segs),'Engine',args.engine,flush=True)
  if args.engine=='piper':make_piper(segs,where)
  elif args.engine=='edge':asyncio.run(make_edge(segs,where,args.rate))
+ elif args.engine=='azure':make_azure(segs,where)
  else:make_fish(segs,where)
  assemble(segs,where,args.pause)

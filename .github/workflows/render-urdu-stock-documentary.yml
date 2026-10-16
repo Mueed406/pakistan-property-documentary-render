@@ -26,10 +26,22 @@ jobs:
           sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-extra
           python -m pip install --upgrade pip
           python -m pip install -r requirements-free.txt
+      - name: Check source code compiles
+        run: python -m py_compile free_voice.py editorial_motion.py documentary_editor.py original_score.py
       - name: Check environment
         run: python verify_environment.py
       - name: Generate Pakistani Urdu narration on CPU (Piper)
-        run: python free_voice.py --engine piper
+        env:
+          AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
+          AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+        run: |
+          if [ -n "$AZURE_SPEECH_KEY" ] && [ -n "$AZURE_SPEECH_REGION" ]; then
+            echo 'Using official Azure F0 Pakistani Urdu neural TTS.'
+            python free_voice.py --engine azure
+          else
+            echo 'WARNING: Azure F0 not configured; using tuned offline Piper, voice still needs quality approval.'
+            python free_voice.py --engine piper
+          fi
       - name: Download actual HD stock MP4 clips
         run: python documentary_editor.py download
       - name: Generate original instrumental soundtrack (public-domain composition)
