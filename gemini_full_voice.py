@@ -122,8 +122,26 @@ def main():
    with wave.open(str(path),"rb") as src:writer.writeframes(src.readframes(src.getnframes()))
    writer.writeframes(b"\0\0"*int(48000*.26))
  # Provisional SRT timings at paragraph/cue level. Subtitles require alignment QA.
- srt="".join(f"{i}\n{timestamp(c['start'])} --> {timestamp(c['end'])}\n{c['text']}\n\n"
-   for i,c in enumerate(all_cues,1))
+ def subtitle_groups(text,max_chars=64):
+  # Real Urdu words remain intact; short 1-2 line captions instead of unreadable paragraphs.
+  words=text.split()
+  groups=[];buffer=[]
+  for w in words:
+   if buffer and len(" ".join(buffer+[w]))>max_chars:
+    groups.append(" ".join(buffer));buffer=[w]
+   else:buffer.append(w)
+  if buffer:groups.append(" ".join(buffer))
+  return groups
+ subtitles=[];n=1
+ for c in all_cues:
+  groups=subtitle_groups(c["text"])
+  spans=[max(1,len(g.split())) for g in groups];weight=sum(spans)
+  pos=c["start"];duration=c["end"]-c["start"]
+  for g,w in zip(groups,spans):
+   end=pos+duration*w/weight
+   subtitles.append(f"{n}\\n{timestamp(pos)} --> {timestamp(end)}\\n{g}\\n\\n")
+   pos=end;n+=1
+ srt="".join(subtitles)
  (ROOT/"urdu_timed_gemini_review.srt").write_text(srt,encoding="utf-8-sig")
  (ROOT/"voice_cue_times_gemini.json").write_text(json.dumps(all_cues,ensure_ascii=False,indent=2),encoding="utf-8")
  print("CREATED GEMINI NARRATION",round(t,2),"seconds",len(all_cues),"clips. Subtitle time cues need manual split/alignment.",flush=True)
