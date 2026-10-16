@@ -1,0 +1,100 @@
+name: Render Gemini narrated cinematic hybrid documentary (review)
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_free_tier:
+        description: "Confirm Gemini key belongs to free-tier project (no paid charges authorized)"
+        required: true
+        type: choice
+        options:
+          - NOT_CONFIRMED
+          - CONFIRM_FREE_TIER_ONLY
+      blender_preview_run_id:
+        description: "Successful Blender animation preview run ID"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  full_documentary:
+    if: inputs.confirm_free_tier == 'CONFIRM_FREE_TIER_ONLY'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 200
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install free Blender and TTS tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg blender xvfb fonts-noto-core fonts-noto-extra
+          python -m pip install -r requirements-free.txt 'numpy>=1.23,<3'
+      - name: Validate Python and plan Urdu sections
+        run: |
+          python -m py_compile gemini_full_voice.py documentary_editor.py cinematic_blender/hybrid_composite.py
+          python gemini_full_voice.py --plan
+      - name: Generate natural Pakistani Urdu narration (no paid fallback)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          test -n "$GEMINI_API_KEY" || (echo "Missing Gemini key" && exit 1)
+          python gemini_full_voice.py
+          cp voice_cue_times_gemini.json voice_cue_times.json
+      - name: Download licensed actual moving stock footage
+        run: python documentary_editor.py download
+      - name: Generate original instrumental background score
+        run: python original_score.py --voice urdu_voice_gemini.wav --output licensed_score.wav
+      - name: Edit live footage, narration, Urdu subtitles, color and music
+        run: |
+          python documentary_editor.py render --voice urdu_voice_gemini.wav --subtitles urdu_timed_gemini_review.srt --music licensed_score.wav
+          python documentary_editor.py qc --file renders/Pakistan_Property_Stock_Documentary_FINAL.mp4
+      - name: Retrieve Blender authored editable scenes
+        uses: actions/download-artifact@v4
+        with:
+          name: actual-blender-documentary-3d-preview
+          run-id: ${{ inputs.blender_preview_run_id }}
+          github-token: ${{ github.token }}
+          path: cinematic_output
+      - name: Re-render genuine Blender 3D animated scenes in 1080p
+        run: |
+          for scene in 01_cinematic_parcel_map 02_architecture_construction 03_evidence_document_desk; do
+            project="cinematic_output/$scene.blend"
+            test -s "$project" || (echo "Missing 3D scene $project" && exit 1)
+            xvfb-run -a blender -b "$project" -t 4 -o "//${scene}_full_" -F FFMPEG --python-expr "import bpy; s=bpy.context.scene; s.render.resolution_x=1920; s.render.resolution_y=1080; s.render.resolution_percentage=100; s.render.ffmpeg.codec='H264'" -a
+            python -c "from pathlib import Path; p=Path('cinematic_output'); a=sorted(p.glob('$scene'+'*full*'+'.mp4')); assert a, 'No Blender HD render'; a[0].rename(p/('$scene'+'.mp4'))"
+          done
+      - name: Overlay moving 3D architecture on relevant narrated footage
+        run: |
+          python cinematic_blender/hybrid_composite.py \
+            --base renders/Pakistan_Property_Stock_Documentary_FINAL.mp4 \
+            --scenes-dir cinematic_output \
+            --cues voice_cue_times_gemini.json \
+            --out renders/Pakistan_Property_Gemini_Blender_HYBRID_REVIEW.mp4
+          python documentary_editor.py qc --file renders/Pakistan_Property_Gemini_Blender_HYBRID_REVIEW.mp4
+      - name: Upload review film, subtitles, Blender source projects and metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: pakistan-property-hybrid-gemini-blender-review
+          path: |
+            renders/Pakistan_Property_Gemini_Blender_HYBRID_REVIEW.mp4
+            renders/Pakistan_Property_Gemini_Blender_HYBRID_REVIEW.json
+            urdu_timed_gemini_review.srt
+            voice_cue_times_gemini.json
+            cinematic_output/*.blend
+            LICENSE_SCORE.md
+          retention-days: 7
+          if-no-files-found: error
+      - name: Save debugging metadata if film fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hybrid-production-debug
+          path: |
+            voice_cue_times_gemini.json
+            urdu_timed_gemini_review.srt
+            renders/edit_decisions.json
+            cinematic_output/*.blend
+          if-no-files-found: ignore
+          retention-days: 3
