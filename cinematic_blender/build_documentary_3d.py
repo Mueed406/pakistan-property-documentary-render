@@ -54,6 +54,7 @@ def box(name,loc,scale,material,bevel=.06):
  if bevel:
   mod=obj.modifiers.new("Micro bevels, realistic edge highlight","BEVEL")
   mod.width=bevel;mod.segments=2
+  if hasattr(obj.data,"use_auto_smooth"):obj.data.use_auto_smooth=True
   mod=obj.modifiers.new("Weighted hard-surface normals","WEIGHTED_NORMAL")
  return obj
 
@@ -87,6 +88,9 @@ def base_scene(name):
  bpy.ops.object.select_all(action="SELECT");bpy.ops.object.delete(use_global=False)
  scene=bpy.context.scene;scene.name=name
  scene.render.engine="CYCLES";scene.cycles.samples=SAMPLES
+ for layer in scene.view_layers:
+  if hasattr(layer,"cycles"):layer.cycles.use_denoising=False
+ if hasattr(scene.cycles,"use_denoising"):scene.cycles.use_denoising=False
  scene.render.threads_mode="FIXED";scene.render.threads=4
  scene.render.resolution_x=WIDTH;scene.render.resolution_y=HEIGHT
  scene.render.resolution_percentage=100
