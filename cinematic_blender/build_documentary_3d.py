@@ -235,11 +235,16 @@ def render_scene(func,asset=None):
  return s
 
 def main():
- provenance=ROOT/"cinematic_assets"/"asset_provenance.json"
+ provenance=ROOT/"cinematic_blender"/"cinematic_assets"/"asset_provenance.json"
  if not provenance.is_file():raise RuntimeError("Need the licensed architecture first")
  asset=Path(json.loads(provenance.read_text())["file"])
  for f in (map_animation,lambda:building_animation(asset),dossier_animation):
   render_scene(f)
  print("3D PREVIEW COMPLETE",QUALITY,str(OUT),flush=True)
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+ try:main()
+ except Exception as e:
+  import traceback
+  traceback.print_exc()
+  sys.exit(2)
