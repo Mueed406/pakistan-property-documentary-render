@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/check-new-gemini-key.yml
+      - gemini_tts_lab.py
   workflow_dispatch:
 
 permissions:
