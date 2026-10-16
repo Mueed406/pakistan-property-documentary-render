@@ -1,0 +1,64 @@
+name: Build genuine Blender documentary animation preview
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/blender-cinematic-preview.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cinematic_blender:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 145
+    steps:
+      - name: Checkout production sources
+        uses: actions/checkout@v5
+      - name: Install free Blender and media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender xvfb mesa-utils ffmpeg fonts-noto-core fonts-noto-extra
+          python -m pip install 'requests>=2.31,<3' 'numpy>=1.23,<3'
+          blender --version | head -3
+      - name: Validate Python syntax and provenance
+        run: |
+          python -m py_compile cinematic_blender/fetch_cc0_assets.py cinematic_blender/build_documentary_3d.py cinematic_blender/make_preview.py
+          python cinematic_blender/fetch_cc0_assets.py
+      - name: Render three actual keyframed Blender animation scenes
+        run: |
+          mkdir -p cinematic_output
+          xvfb-run -a -s '-screen 0 1280x720x24' blender -b -t 4 -P cinematic_blender/build_documentary_3d.py -- --preview
+      - name: Edit with actual transitions, source labels and original music
+        run: python cinematic_blender/make_preview.py
+      - name: Video and editable Blender project QC
+        run: |
+          test -s cinematic_output/01_cinematic_parcel_map.blend
+          test -s cinematic_output/02_architecture_construction.blend
+          test -s cinematic_output/03_evidence_document_desk.blend
+          test -s cinematic_output/property_documentary_3d_visual_preview.mp4
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 cinematic_output/property_documentary_3d_visual_preview.mp4
+      - name: Upload real 3D animation, project files and CC0 provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: actual-blender-documentary-3d-preview
+          path: |
+            cinematic_output/*.blend
+            cinematic_output/property_documentary_3d_visual_preview.mp4
+            cinematic_output/preview_technical_qc.json
+            cinematic_assets/asset_provenance.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Upload diagnostics if rendering fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blender-cinematic-debug
+          path: |
+            cinematic_assets/asset_provenance.json
+            cinematic_output/*.blend
+            cinematic_output/*.mp4
+          retention-days: 3
+          if-no-files-found: ignore
