@@ -1,0 +1,65 @@
+name: Produce Urdu Stock Documentary (No Paid APIs)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  video:
+    name: Render documentary on Linux
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Check out the video project
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install free system tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-extra
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-free.txt
+      - name: Check environment
+        run: python verify_environment.py
+      - name: Generate Pakistani Urdu narration on CPU (Piper)
+        run: python free_voice.py --engine piper
+      - name: Download actual HD stock MP4 clips
+        run: python documentary_editor.py download
+      - name: Render original real-footage documentary
+        run: |
+          if [ -f licensed_score.mp3 ]; then
+            python documentary_editor.py render --voice urdu_voice.wav --subtitles urdu_timed.srt --music licensed_score.mp3
+          else
+            echo 'No licensed score supplied; rendering voice-first video without unlicensed music.'
+            python documentary_editor.py render --voice urdu_voice.wav --subtitles urdu_timed.srt
+          fi
+      - name: Validate MP4, audio and dimensions
+        run: python documentary_editor.py qc --file renders/Pakistan_Property_Stock_Documentary_FINAL.mp4
+      - name: Upload downloadable documentary artifact for manual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: pakistan-property-urdu-stock-documentary
+          path: |
+            renders/Pakistan_Property_Stock_Documentary_FINAL.mp4
+            urdu_timed.srt
+            renders/edit_decisions.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload troubleshooting report if the render fails
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentary-render-debug
+          path: |
+            urdu_timed.srt
+            voice_cue_times.json
+            renders/edit_decisions.json
+          if-no-files-found: ignore
+          retention-days: 3

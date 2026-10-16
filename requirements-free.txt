@@ -1,0 +1,3 @@
+requests>=2.31,<3
+piper-tts>=1.2,<2
+edge-tts>=7,<9
