@@ -46,7 +46,12 @@ def save_response(data,path):
     secs=f.getnframes()/f.getframerate()
    if not (12<secs<115):raise ValueError(f"Unexpected duration: {secs:.1f}s")
    return round(secs,1)
- raise ValueError("No valid inline audio returned by Gemini TTS")
+ diag={"candidate_count":len(data.get("candidates") or []),
+ "finish_reasons":[c.get("finishReason") for c in data.get("candidates",[])],
+ "part_types":[list((p or {}).keys()) for c in data.get("candidates",[]) for p in ((c.get("content") or {}).get("parts") or [])],
+ "prompt_feedback":data.get("promptFeedback"),"usage_keys":list((data.get("usageMetadata") or {}).keys())}
+ print("TTS RESPONSE SHAPE (no content/audio/key):",json.dumps(diag,ensure_ascii=False)[:1500],flush=True)
+ raise ValueError("Gemini HTTP 200 but returned no inline audio; inspect candidate finishReason and response format above")
 
 def main():
  a=argparse.ArgumentParser()
