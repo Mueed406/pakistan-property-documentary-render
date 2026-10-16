@@ -90,7 +90,7 @@ def base_scene(name):
  scene.render.threads_mode="FIXED";scene.render.threads=4
  scene.render.resolution_x=WIDTH;scene.render.resolution_y=HEIGHT
  scene.render.resolution_percentage=100
- scene.render.image_settings.color_mode="RGBA"
+ scene.render.image_settings.color_mode="RGB"
  scene.render.film_transparent=False
  scene.render.fps=FPS;scene.frame_start=1;scene.frame_end=FRAMECOUNT
  scene.view_settings.view_transform="AgX"
@@ -229,8 +229,9 @@ def render_scene(func,asset=None):
  bpy.context.window.scene=s
  bpy.ops.wm.save_as_mainfile(filepath=str(OUT/(s.name+".blend")))
  bpy.ops.render.render(animation=True)
- if not (OUT/(s.name+".mp4")).exists():
-  raise RuntimeError("Blender did not output the animation file")
+ clips=list(OUT.glob(s.name+"*.mp4"))
+ if not clips:raise RuntimeError("Blender did not output the animation file")
+ if clips[0]!=OUT/(s.name+".mp4"): clips[0].rename(OUT/(s.name+".mp4"))
  return s
 
 def main():
