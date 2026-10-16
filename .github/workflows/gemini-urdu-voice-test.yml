@@ -1,0 +1,44 @@
+name: Test natural Gemini Urdu documentary voice
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gemini_urdu_voice_audition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+      - name: Install Python requests
+        run: python -m pip install "requests>=2.31,<3"
+      - name: Validate code and offline tests (zero API calls)
+        run: |
+          python -m py_compile gemini_tts_lab.py
+          python gemini_tts_lab.py --dry-run > /dev/null
+          python -m unittest discover -s tests -p test_gemini_tts_lab.py -v
+      - name: Require private API key
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "Missing GEMINI_API_KEY secret. Use a free-tier Gemini API key from AI Studio."
+            exit 1
+          fi
+      - name: Generate TWO short Urdu narrator auditions
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python gemini_tts_lab.py
+      - name: Upload audio auditions
+        uses: actions/upload-artifact@v4
+        with:
+          name: gemini-urdu-documentary-auditions
+          path: |
+            gemini_voice_output/*.wav
+            gemini_voice_output/report.json
+            gemini_voice_output/LISTEN_FIRST.txt
+          if-no-files-found: error
+          retention-days: 7
