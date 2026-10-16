@@ -18,3 +18,19 @@ Reference: https://ai.google.dev/gemini-api/docs/speech-generation
 Pricing: https://ai.google.dev/gemini-api/docs/pricing
 
 Only 2 auditions; no retries after errors; no premium fallback. The test includes offline validation and a fail-closed no-key check.
+
+## If GitHub Gemini audition fails with HTTP 403 "Your project has been denied access"
+
+This is a Google project/account access denial, **not** an audio script bug, unsupported Urdu text, GitHub runner OS, or a missing secret. On Run #38970266120, GitHub found the secret and passed all five offline tests. The first Gemini API generation call returned this exact denial.
+
+Official Google API errors documentation calls HTTP 403 `permission_denied` and advises reviewing API key permissions and project access. Google's developer forum has staff instructions to:
+- Open Google AI Studio **Dashboard → Projects**, and review **Billing** for any account/project warning or "Unavailable" status.
+- Open https://console.cloud.google.com/ and select the Google Cloud project associated with this API key. Inspect the console home page for a denial/review/appeal banner.
+- Use Google's indicated appeal route or contact Google support; report the 403, region, sanitized timestamp, and project ID privately (never paste API key).
+- Do not automatically retry a 403, create multiple keys to evade a restriction, or enable paid billing as a speculative fix.
+
+The job now uses `actions/checkout@v5` and `ubuntu-24.04` to remove unrelated Node 20 / migration warnings. It remains manually triggered and makes no further calls until you explicitly start it.
+
+Helpful guidance:
+https://ai.google.dev/gemini-api/docs/api-errors
+https://discuss.ai.google.dev/t/403-permission-denied-your-project-has-been-denied-access-new-account/143684
