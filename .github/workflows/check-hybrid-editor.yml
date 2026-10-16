@@ -1,0 +1,30 @@
+name: Validate new hybrid documentary editor (no paid APIs)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/check-hybrid-editor.yml
+      - gemini_full_voice.py
+      - cinematic_blender/hybrid_composite.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hybrid_offline_qc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install offline Python dependencies
+        run: python -m pip install 'requests>=2.31,<3'
+      - name: Compile editor, voice and 3D pipeline
+        run: |
+          python -m py_compile gemini_full_voice.py
+          python -m py_compile cinematic_blender/hybrid_composite.py
+          python -m py_compile cinematic_blender/build_documentary_3d.py
+          python -m py_compile cinematic_blender/fetch_cc0_assets.py
+      - name: Plan real Urdu speech chunks, no Gemini calls
+        run: python gemini_full_voice.py --plan
