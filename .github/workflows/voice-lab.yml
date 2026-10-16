@@ -1,0 +1,46 @@
+name: Compare free Pakistani Urdu voices
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - voice_lab.py
+      - .github/workflows/voice-lab.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  piper_voice_comparison:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Install free audio dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-free.txt
+      - name: Check Python syntax
+        run: python -m py_compile voice_lab.py free_voice.py
+      - name: Produce three voice samples
+        run: python voice_lab.py
+      - name: Verify all audio samples
+        run: |
+          test -s voice_lab_output/A_current_reference.mp3
+          test -s voice_lab_output/B_calm_broadcast.mp3
+          test -s voice_lab_output/C_clear_measured.mp3
+          ffprobe -v error -show_entries format=duration -of default=nokey=1:noprint_wrappers=1 voice_lab_output/B_calm_broadcast.mp3
+      - name: Upload audition pack
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-urdu-piper-voice-a-b-c
+          path: |
+            voice_lab_output/*.mp3
+            voice_lab_output/LISTEN_FIRST.txt
+            voice_lab_output/comparison.json
+          retention-days: 7
+          if-no-files-found: error
