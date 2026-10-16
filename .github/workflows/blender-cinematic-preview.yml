@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/blender-cinematic-preview.yml
+      - cinematic_blender/build_documentary_3d.py
   workflow_dispatch:
 
 permissions:
@@ -31,6 +32,9 @@ jobs:
         run: |
           mkdir -p cinematic_output
           xvfb-run -a -s '-screen 0 1280x720x24' blender -b -t 4 -P cinematic_blender/build_documentary_3d.py -- --preview
+          test -s cinematic_output/01_cinematic_parcel_map.mp4
+          test -s cinematic_output/02_architecture_construction.mp4
+          test -s cinematic_output/03_evidence_document_desk.mp4
       - name: Edit with actual transitions, source labels and original music
         run: python cinematic_blender/make_preview.py
       - name: Video and editable Blender project QC
@@ -48,7 +52,7 @@ jobs:
             cinematic_output/*.blend
             cinematic_output/property_documentary_3d_visual_preview.mp4
             cinematic_output/preview_technical_qc.json
-            cinematic_assets/asset_provenance.json
+            cinematic_blender/cinematic_assets/asset_provenance.json
           retention-days: 7
           if-no-files-found: error
       - name: Upload diagnostics if rendering fails
