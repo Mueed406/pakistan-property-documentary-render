@@ -71,6 +71,12 @@ def main():
   if result.status_code!=200:
    try:detail=(result.json().get("error") or {}).get("message","")
    except ValueError:detail=""
+   if result.status_code==403 and "project has been denied access" in str(detail).lower():
+    raise RuntimeError("GEMINI PROJECT ACCESS DENIED (403): Google rejected this project's access to the Gemini API. This is not a Node.js, Ubuntu, GitHub Secrets, or TTS prompt error. Do not retry or buy credits. Check Google AI Studio Projects/Billing and Google Cloud Console for an account/project restriction or appeal banner, then contact Google support if needed. No further Gemini calls made.")
+   if result.status_code==403:
+    raise RuntimeError("GEMINI PERMISSION DENIED (403): Check the API key's project permissions and supported model access in Google AI Studio. No automatic retries.")
+   if result.status_code==429:
+    raise RuntimeError("GEMINI QUOTA/RESOURCE LIMIT (429): Check free-tier limits in Google AI Studio. No automatic paid fallback.")
    raise RuntimeError(f"Gemini {result.status_code}: {str(detail)[:250]}. No paid fallback or auto-retry.")
   wav=OUT/("urdu_"+voice.lower()+".wav")
   sec=save_response(result.json(),wav)
