@@ -85,6 +85,18 @@ function texture(seed:number,base:[number,number,number]){
 }
 const floorMat=new THREE.MeshStandardMaterial({map:texture(11,[58,64,65]),metalness:.24,roughness:.91});
 const wallMat=new THREE.MeshStandardMaterial({map:texture(27,[79,89,90]),metalness:.15,roughness:.94});
+if(rigProof){
+ // Genuine CC0 Poly Haven three-map surface test; no source package is bundled in the repo.
+ // API metadata, MD5 and SHA256 are checked by scripts/acquire-cc0-pbr.mjs.
+ const imageLoader=new THREE.TextureLoader();
+ const paths=['/assets/pbr/rusty_metal_sheet_diff.jpg','/assets/pbr/rusty_metal_sheet_nor_gl.jpg','/assets/pbr/rusty_metal_sheet_rough.jpg'];
+ const maps=await Promise.all(paths.map(path=>imageLoader.loadAsync(path)));
+ for(const tx of maps){tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(1,3);tx.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());}
+ maps[0].colorSpace=THREE.SRGBColorSpace;
+ metal.color.set(0xffffff);
+ metal.map=maps[0];metal.normalMap=maps[1];metal.roughnessMap=maps[2];
+ metal.normalScale.set(.36,.36);metal.metalness=.68;metal.roughness=.8;metal.needsUpdate=true;
+}
 box(12,.35,110,0,-.28,-19,floorMat);
 box(.32,8,110,-5.6,3.5,-19,wallMat);
 box(.32,8,110,5.6,3.5,-19,wallMat);
