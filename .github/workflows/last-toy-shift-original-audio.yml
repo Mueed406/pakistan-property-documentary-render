@@ -1,0 +1,38 @@
+name: Last Toy Shift — Original 90-second SFX/Stems (NOT FINAL)
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - 'films/the-last-toy-shift/scripts/soundscape_90s.py'
+      - '.github/workflows/last-toy-shift-original-audio.yml'
+  workflow_dispatch:
+jobs:
+  original-soundscape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Synthesize all original stereo tracks
+        run: |
+          pip install -q numpy
+          python scripts/soundscape_90s.py --out output/soundscape
+      - name: Encode draft listening mix (NO VOICES)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y ffmpeg
+          ffmpeg -hide_banner -loglevel error -y -i output/soundscape/TEMP_90S_MIX_NO_VOICES_NOT_FINAL.wav -c:a aac -b:a 192k output/TEMP_90S_MIX_NO_VOICES_NOT_FINAL.m4a
+          ffprobe -v error -show_entries stream=sample_rate,channels -show_entries format=duration -of json output/TEMP_90S_MIX_NO_VOICES_NOT_FINAL.m4a
+      - uses: actions/upload-artifact@v4
+        with:
+          name: last-toy-shift-original-90s-sound-and-stems-NOT-FINAL
+          path: |
+            films/the-last-toy-shift/output/TEMP_90S_MIX_NO_VOICES_NOT_FINAL.m4a
+            films/the-last-toy-shift/output/soundscape/*.wav
+            films/the-last-toy-shift/output/soundscape/audio_qa.json
+          retention-days: 7
