@@ -1,0 +1,30 @@
+name: Studio v4 — Free regression checks
+on:
+  pull_request:
+    paths:
+      - 'production/**'
+      - 'tests/test_studio_v4.py'
+      - 'studio_cli.py'
+      - '.github/workflows/studio-v4-tests.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-and-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Syntax check without installing media SDKs
+        run: |
+          python -m py_compile studio_cli.py production/studio_pipeline.py production/youtube_private_upload.py tests/test_studio_v4.py
+      - name: Run safe unit tests — no video render, API keys or credits
+        run: python -m unittest discover -s tests -p test_studio_v4.py -v
+      - name: CLI contract check
+        run: |
+          python studio_cli.py documentary --help
+          python studio_cli.py documentary init --project /tmp/ppg-v4-smoke --title "New subject" --minutes 5 --mode free
+          python studio_cli.py documentary status --project /tmp/ppg-v4-smoke
