@@ -165,7 +165,7 @@ def boundaries_from_report(path, max_events=20, min_spacing=14, duration_frames=
     """Choose story cuts, never blindly apply an effect to every join."""
     report=json.loads(Path(path).read_text(encoding='utf-8'))
     parts=report['parts']; selected=[]; last=-99999
-    kinds=['paper-tear','newsprint-slide','photo-match','ink-print','film-splice']
+    kinds=['paper-tear','newspaper-slide','photo-match','ink-print','film-splice']
     for i in range(1,len(parts)):
         a,b=parts[i-1],parts[i]
         if a['kind']==b['kind']:continue
