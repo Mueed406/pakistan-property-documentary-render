@@ -1,0 +1,80 @@
+name: Verify Windows AI documentary software compatibility
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-windows-studio.yml
+      - windows/**
+      - audio/**
+      - editorial/**
+      - motion/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows_compatibility:
+    runs-on: windows-2025
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Audit Windows CLI environment without modifying the machine
+        shell: pwsh
+        run: |
+          ./windows/Verify-Studio.ps1
+      - name: Install open-source Python audio and editing dependencies
+        shell: pwsh
+        run: |
+          python -m pip install -r windows/requirements-studio.txt
+          python -c "import pedalboard,opentimelineio,numpy,pyloudnorm; print('Windows audio+OTIO imports passed')"
+      - name: Verify native video encoder tools
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { choco install ffmpeg -y --no-progress }
+          ffmpeg -version | Select-Object -First 1
+          ffprobe -version | Select-Object -First 1
+      - name: Test actual synthesized audio mastering on Windows
+        shell: pwsh
+        run: |
+          ffmpeg -v error -y -f lavfi -i "sine=frequency=210:duration=8" -ar 48000 -c:a pcm_s16le test_urdu_audio.wav
+          python audio/master_urdu_voice.py --input test_urdu_audio.wav --output test_urdu_audio_mastered.wav
+          if(-not (Test-Path test_urdu_audio_mastered.json)){throw 'Audio QC metadata missing'}
+      - name: Test editing timeline interoperability on Windows
+        shell: pwsh
+        run: |
+          ffmpeg -v error -y -f lavfi -i "color=c=black:s=640x360:r=25:d=3" -c:v libx264 demo_source.mp4
+          $decision = @(@{id="fixture1";description="Factual test source";source=(Resolve-Path demo_source.mp4).Path;start=0.2;duration=2.0;category="test"})
+          $decision | ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 demo_edits.json
+          python editorial/export_otio.py --decisions demo_edits.json --out demo_timeline.otio
+          if(-not (Test-Path demo_timeline.otio)){throw 'OTIO failed'}
+      - name: Install Remotion in its own project
+        shell: pwsh
+        run: |
+          npm.cmd install --prefix motion --no-audit --no-fund
+      - name: Render 15 frames of actual TSX documentary motion
+        shell: pwsh
+        run: |
+          Push-Location motion
+          npx.cmd remotion render src/index.ts EvidenceMotion out/evidence-windows-smoke.mp4 --frames=0-14 --codec=h264 --crf=20
+          Pop-Location
+          if(-not (Test-Path motion/out/evidence-windows-smoke.mp4)){throw 'Remotion smoke video missing'}
+      - name: Upload verified software and test artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ai-editor-smoke-test
+          path: |
+            windows/STUDIO_DIAGNOSTICS.json
+            test_urdu_audio_mastered.wav
+            test_urdu_audio_mastered.json
+            demo_timeline.otio
+            motion/out/evidence-windows-smoke.mp4
+          retention-days: 7
+          if-no-files-found: error
