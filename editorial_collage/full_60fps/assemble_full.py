@@ -55,7 +55,7 @@ def comp_norm(source,dest,startframe,frames,motion=False):
   cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-i',source,'-vf',filt,'-an','-frames:v',str(frames),'-r',str(FPS),'-c:v','libx264','-preset','ultrafast','-crf','21','-pix_fmt','yuv420p','-threads','2',dest]
  else:
   starttime=startframe/FPS
-  filt=f'fps=60,trim=end_frame={frames},setpts=N/(60*TB),format=yuv420p'
+  filt=f'fps=60,tpad=stop_mode=clone:stop_duration=0.25,trim=end_frame={frames},setpts=N/(60*TB),format=yuv420p'
   cmd=['ffmpeg','-hide_banner','-loglevel','error','-y','-ss',f'{starttime:.7f}','-i',source,'-vf',filt,'-an','-frames:v',str(frames),'-r',str(FPS),'-c:v','libx264','-preset','ultrafast','-crf','22','-pix_fmt','yuv420p','-threads','2',dest]
  run(cmd)
  actual=int(next(x for x in probe(dest)['streams'] if x['codec_type']=='video').get('nb_frames',0))
