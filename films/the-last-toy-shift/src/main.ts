@@ -108,7 +108,7 @@ const overhead:THREE.SpotLight[]=[];
 for(let z=10;z>=-48;z-=8){
  const light=new THREE.SpotLight(z<-29?0xee503a:0x8fcbe2,50,23,.55,.68,1.5);
  light.position.set(0,7.05,z);light.target.position.set(0,0,z-1);
- light.castShadow=(z%16===10);light.shadow.mapSize.set(1024,1024);
+ light.castShadow=(Math.round((10-z)/8)%2===0);light.shadow.mapSize.set(1024,1024);
  scene.add(light,light.target);overhead.push(light);
  box(1.2,.1,.45,0,7.09,z,metal);
  box(.7,.055,.3,0,6.99,z,new THREE.MeshStandardMaterial({color:0xb7c9d2,emissive:0xc4e4ee,emissiveIntensity:1.1}));
@@ -246,6 +246,7 @@ const stages=[
 ] as const;
 const slate=document.getElementById('slate')!;
 const state=document.getElementById('state')!;
+if(new URLSearchParams(location.search).get('capture')==='1')state.style.display='none';
 function localStage(f:number){
  const s=planned.shots.find(x=>f>=x.start_frame&&f<x.end_frame_exclusive);
  if(!s)throw new Error('Frame outside manifest: '+f);
@@ -296,6 +297,7 @@ function renderFrame(frame:number){
  creature.legs[0].rotation.x=-gait*.48;
  creature.legs[1].rotation.x=gait*.48;
  creature.rig.rotation.y=index===9?Math.PI:0;
+ if(importedModels[0]){importedModels[0].position.copy(creature.rig.position);importedModels[0].rotation.y=creature.rig.rotation.y;}
  doorGroup.visible=true;
  slidingDoor.position.x=index>=8?3.0*smooth((t-65)/1.5):0;
  lockLight.intensity=index===6?(3+5*(Math.sin(t*14)>.5?1:0)):index===7?2:0;
