@@ -4,6 +4,7 @@ on:
     branches: [feature/last-toy-shift-cinematic-production-20261017]
     paths:
       - '.github/workflows/last-toy-shift-free-english-voice-draft.yml'
+      - 'films/the-last-toy-shift/scripts/temporary_english_voices.py'
   workflow_dispatch:
 jobs:
   offline-noncommercial-voice-audition:
