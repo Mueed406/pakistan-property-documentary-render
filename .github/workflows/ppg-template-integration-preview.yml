@@ -46,9 +46,9 @@ jobs:
           python - <<'PY'
           import json,pathlib
           p=json.loads(pathlib.Path('rendered/TEMPLATE_INTEGRATION_QC.json').read_text())
-          assert p['fps']==60 and p['resolution']==[1280,720] and len(p['third_party_motion_events'])==4
+          assert p['fps']==60 and p['resolution']==[1280,720] and len(p['third_party_motion_events'])==3
           assert p['raw_source_assets_published'] is False
-          print('4 ACTUAL CREATOR MOV ANIMATIONS COMPOSITED INTO 60FPS SOURCE')
+          print('3 ACTUAL CREATOR MOV ANIMATIONS COMPOSITED INTO 60FPS SOURCE')
           PY
       - name: Publish ONLY derivative MP4 and QC, NEVER restricted stand-alone creator MOV files
         uses: actions/upload-artifact@v4
