@@ -84,9 +84,41 @@ function sceneDraw(scene,t,duration){const u=clamp(t/duration);background(scene,
  character({x:421,y:729,k:.57,type:'buyer',mood:'panic',arm:'panic',t});
  ['NOC?','OWNER?','POSSESSION?'].forEach((w,i)=>{let y=379+i*123,x=204,q=clamp(spring(clamp((t-i*.19)*3.8)),0,1.08);c.save();c.translate(x,y);c.rotate((i%2?-.032:.036));c.scale(Math.max(.01,q),Math.max(.01,q));shadow(12,.2);rr(-158,-44,316,88,18,i===0?C.yellow:i===1?C.cream:C.coral);c.shadowColor='transparent';text(w,0,0,w.length>9?25:34,C.ink);c.restore()});
  }
+ // Questions deserve active focus while the buyer reads each verification demand.
+ if(scene===4){
+  const qphase=t*1.55;
+  const chosen=Math.floor(qphase)%3;
+  const yy=379+chosen*123;
+  c.save();c.globalAlpha=.65;
+  const sway=5*Math.sin(t*8.4);
+  c.strokeStyle=C.yellow;c.lineWidth=4;c.lineCap='round';
+  c.beginPath();c.roundRect(35+sway,yy-52,344,102,18);c.stroke();
+  c.globalAlpha=.92;
+  circ(402+Math.sin(t*5)*12,yy,11+3*Math.sin(t*7),C.yellow);
+  text('?',402+Math.sin(t*5)*12,yy,18,C.ink);
+  c.restore();
+ }
  if(scene===5){city(t,697,true);headline('WHEN QUESTIONS GET SERIOUS','PEHLE CHAI!', '',true,u*4);character({x:127,y:656,k:.70,type:'dealer',mood:'smile',t,arm:'hold'});character({x:410,y:670,k:.73,type:'buyer',mood:'confused',t,flip:true});c.save();c.translate(270,531);c.rotate(Math.sin(t*5)*.05);shadow(16,.27);rr(-86,-22,172,111,20,C.cream);c.shadowColor='transparent';c.lineWidth=14;c.strokeStyle=C.cream;c.beginPath();c.arc(95,10,34,-1.2,1.2);c.stroke();rr(-67,-11,136,63,13,'#C98747');rr(-117,90,240,21,10,C.cream);c.restore();for(let i=0;i<3;i++)curve(230+i*40,453,220+i*40+13,425+Math.sin(t*3+i)*9,234+i*40,397,C.white,3);confetti(t,.27)}
  if(scene===6){city(t,730);headline('OKAY, REAL TALK...','JOKES ASIDE!','',false,u*4);character({x:270,y:625,k:1.13,type:'buyer',mood:'smile',t,arm:'point'});for(let i=0;i<4;i++)sparkle(85+i*132,420+(i%2)*85,1.4,C.yellow,t+i)}
- if(scene===7){headline('SMART BUYER CHECKLIST','CHECK BEFORE','YOU PAY!',true,u*4);let cards=[['01','REAL LOCATION','VISIT THE SITE'],['02','AUTHORITY NOC','VERIFY THE APPROVAL'],['03','OWNERSHIP','CHECK THE RECORD'],['04','PAYMENT PROOF','KEEP EVERY RECEIPT']];cards.forEach(([num,title,sub],i)=>{const y=349+i*110,x=40,prog=ease((t-.1-i*.20)*2.4);c.save();c.translate(540*(1-prog),0);shadow(11,.14);rr(x,y,460,94,18,C.cream);c.shadowColor='transparent';rr(x+12,y+15,60,62,14,i%2?C.yellow:C.mint);text(num,x+42,y+47,26,C.ink);text(title,x+94,y+31,23,C.ink,'left',900);text(sub,x+95,y+68,14,'#53706E','left',650);circ(476,y+46,16,C.teal);text('✓',476,y+44,22,C.white);c.restore()})}
+ if(scene===7){headline('SMART BUYER CHECKLIST','CHECK BEFORE','YOU PAY!',true,u*4);let cards=[['01','REAL LOCATION','VISIT THE SITE'],['02','AUTHORITY NOC','VERIFY THE APPROVAL'],['03','OWNERSHIP','CHECK THE RECORD'],['04','PAYMENT PROOF','KEEP EVERY RECEIPT']];cards.forEach(([num,title,sub],i)=>{const y=349+i*110,x=40,prog=ease((t-.1-i*.20)*2.4);c.save();c.translate(540*(1-prog),4*Math.sin(t*2.9+i*1.8));shadow(11,.14);rr(x,y,460,94,18,C.cream);c.shadowColor='transparent';rr(x+12,y+15,60,62,14,i%2?C.yellow:C.mint);text(num,x+42,y+47,26,C.ink);text(title,x+94,y+31,23,C.ink,'left',900);text(sub,x+95,y+68,14,'#53706E','left',650);circ(476,y+46,16,C.teal);text('✓',476,y+44,22,C.white);c.restore()})}
+ // Active paper-scanner motion across verification cards; no 5s frozen checklist.
+ if(scene===7){
+  const scanY=336+(t*112)%438;
+  c.save();
+  c.globalAlpha=.27;
+  c.fillStyle=C.teal;c.fillRect(40,scanY,458,7);
+  c.strokeStyle=C.yellow;c.lineWidth=5;c.lineCap='round';
+  const active=Math.floor(t/1.35)%4;
+  const cardY=349+active*110;
+  c.beginPath();c.roundRect(32+Math.sin(t*6)*3,cardY-8,475,109,19);c.stroke();
+  c.globalAlpha=.92;
+  circ(467,cardY+48,17+2*Math.sin(t*8),C.yellow);
+  text('✓',467,cardY+46,20,C.ink);
+  c.restore();
+  // Archival process progress bar reveals the completed buyer-verification checklist.
+  rr(54,757,427,8,4,'rgba(12,63,65,.20)');
+  rr(54,757,Math.max(9,427*(.05+.95*clamp(t/6.1))),8,4,C.yellow);
+ }
  if(scene===8){city(t,715);headline('BIGGER SIGNS ≠ BIGGER SAFETY','BIG BOARD','NO GUARANTEE!',false,u*4);c.save();c.translate(275,532);c.rotate(-.08+.03*Math.sin(t*3));shadow(19,.26);rr(-209,-111,418,217,15,C.yellow);c.shadowColor='transparent';text('MEGA DEAL!',0,-56,47,C.ink);text('100% TRUST?!',0,10,36,C.red);text('CHECK THE FACTS.',0,58,22,C.ink);line(-120,108,-134,215,'#6A6D69',14);line(120,106,138,216,'#6A6D69',14);c.restore();circ(432,605,71,C.coral);text('!',432,603,99,C.white)}
  if(scene===9){city(t,733);house(270,545,1.3,t);character({x:110,y:684,k:.61,type:'dealer',mood:'smile',t,arm:'point'});character({x:437,y:684,k:.61,type:'buyer',mood:'smile',t,flip:true});tracked('PAKISTAN PROPERTY GROUP',270,98,19,C.mint,2);c.save();c.translate(270,250);c.scale(.6+.4*spring(u*5),.6+.4*spring(u*5));text('RESEARCH',0,-54,62,C.white);rr(-200,-7,400,87,21,C.yellow);text('FIRST!',0,36,68,C.ink);c.restore();text('INVEST SMART. 🏠',270,405,30,C.white);confetti(t,.6)}
 }
