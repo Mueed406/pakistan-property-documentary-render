@@ -282,6 +282,7 @@ for _,st,en,txt in re.findall(pattern,srt,flags=re.S):
  a=max(0,ms(st)-initial);b=min(DUR*1000,ms(en)-initial)
  if b<=a:continue
  entries.append(f'{len(entries)+1}\n{clock(a)} --> {clock(b)}\n{txt.strip()}')
+(ROOT/'build').mkdir(parents=True,exist_ok=True)
 new_srt=ROOT/'build/urdu_25s.srt';new_srt.write_text('\n\n'.join(entries)+'\n',encoding='utf-8')
 # Burn subtitles with proper open-source Arabic font and cinematic unobtrusive black outline.
 # Keep untouched original documentary narration at the correct real-time offset.
