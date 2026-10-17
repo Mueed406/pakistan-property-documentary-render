@@ -1,0 +1,119 @@
+name: Full 6m50 Documentary — Eight HTML Motion Chapters
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/render-full-browser-documentary.yml
+  workflow_dispatch:
+    inputs:
+      baseline_run_id:
+        description: "Approved full-length stock documentary source run (original 6:50)"
+        required: true
+        default: "38962816235"
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  browser_motion_full_documentary:
+    runs-on: windows-2025
+    timeout-minutes: 150
+    steps:
+      - name: Check out professional documentary source
+        uses: actions/checkout@v5
+      - name: Install Python 3.11
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install Node.js 24 LTS-compatible renderer
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Obtain original verified full-length real-footage film
+        uses: actions/download-artifact@v4
+        with:
+          name: pakistan-property-urdu-stock-documentary
+          run-id: ${{ inputs.baseline_run_id || '38962816235' }}
+          github-token: ${{ github.token }}
+          path: baseline
+      - name: Install frame-accurate browser video dependencies
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {
+            choco install ffmpeg -y --no-progress
+          }
+          ffprobe -version | Select-Object -First 1
+          npm.cmd install --prefix browser_motion --no-audit --no-fund
+      - name: Verify authentic moving stock film and 410-second narration are available
+        shell: pwsh
+        run: |
+          python -m py_compile browser_motion/full_documentary_assemble.py
+          $v = "baseline/renders/Pakistan_Property_Stock_Documentary_FINAL.mp4"
+          $s = "baseline/urdu_timed.srt"
+          if (-not (Test-Path $v)) { throw "Missing original MP4" }
+          if (-not (Test-Path $s)) { throw "Missing originally timed Urdu SRT" }
+          $d = [double](ffprobe -v error -show_entries format=duration -of default=nokey=1:noprint_wrappers=1 $v)
+          if ($d -lt 360 -or $d -gt 420) { throw "Original video is not full length" }
+          Write-Host "VERIFIED BASELINE DURATION: $d seconds"
+      - name: Render eight visually distinct 1080p browser motion chapters
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path motion-output | Out-Null
+          foreach ($i in 0..7) {
+            $number = "{0:d2}" -f $i
+            Write-Host "Rendering 1080p motion scene $number of 08"
+            node browser_motion/render.mjs browser_motion/full_documentary_scenes.html --out "motion-output/scene_$number.mp4" --scene "$i" --width 1920 --height 1080 --fps 25 --seconds 7.5
+            if ($LASTEXITCODE -ne 0) { throw "Browser render failed for scene $number" }
+          }
+      - name: Assemble entire 6m50 feature with narration-matched explainer segments
+        shell: pwsh
+        run: |
+          python browser_motion/full_documentary_assemble.py --base baseline/renders/Pakistan_Property_Stock_Documentary_FINAL.mp4 --srt baseline/urdu_timed.srt --motion-dir motion-output --out renders/Pakistan_Property_Full_Browser_Motion_Review.mp4 --work full_motion_segments
+          if ($LASTEXITCODE -ne 0) { throw "Professional timeline assembly failed" }
+      - name: Verify final Full HD MP4, original audio, subtitle provenance and duration
+        shell: pwsh
+        run: |
+          $v = "renders/Pakistan_Property_Full_Browser_Motion_Review.mp4"
+          $qc = "renders/Pakistan_Property_Full_Browser_Motion_Review.qc.json"
+          if (-not (Test-Path $v)) { throw "No feature-length MP4!" }
+          if (-not (Test-Path $qc)) { throw "No QC evidence!" }
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 $v
+          $json = Get-Content -Raw $qc | ConvertFrom-Json
+          if ($json.motion_scenes -ne 8) { throw "Missing animated scenes" }
+          if ($json.seconds -lt 359 -or $json.seconds -gt 428) { throw "Wrong full-film duration" }
+      - name: Upload verified entire Full HD feature for human review
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-FULL-6m50-HD-BrowserMotion-Review
+          path: |
+            renders/Pakistan_Property_Full_Browser_Motion_Review.mp4
+            renders/Pakistan_Property_Full_Browser_Motion_Review.qc.json
+            renders/Pakistan_Property_Full_Browser_Motion_Review.edl.json
+            baseline/urdu_timed.srt
+            browser_motion/full_documentary_scenes.html
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload individual rendered scene assets for re-editing
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-8-Editable-1080p-Motion-Chapters
+          path: |
+            motion-output/*.mp4
+            browser_motion/full_documentary_scenes.html
+          if-no-files-found: error
+          retention-days: 7
+      - name: Upload diagnostics if unfinished
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-FullMotion-Build-Diagnostics
+          path: |
+            renders/*.json
+            browser_motion/full_documentary_scenes.html
+            full_motion_segments/*.txt
+            motion-output/*.mp4
+          if-no-files-found: ignore
+          retention-days: 3
