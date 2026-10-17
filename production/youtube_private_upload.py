@@ -50,16 +50,16 @@ def main(argv=None):
                           "channel":a.channel_id, "privacy":"private", "network_called":False},indent=2))
         return 0
 
+    env=("YOUTUBE_CLIENT_ID","YOUTUBE_CLIENT_SECRET","YOUTUBE_REFRESH_TOKEN")
+    missing=[k for k in env if not os.environ.get(k)]
+    if missing:
+        raise SystemExit("Upload blocked: missing OAuth secrets "+", ".join(missing))
+
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
     from googleapiclient.errors import HttpError
-
-    env=("YOUTUBE_CLIENT_ID","YOUTUBE_CLIENT_SECRET","YOUTUBE_REFRESH_TOKEN")
-    missing=[k for k in env if not os.environ.get(k)]
-    if missing:
-        raise SystemExit("Upload blocked: missing OAuth secrets "+", ".join(missing))
     creds=Credentials(
         token=None,refresh_token=os.environ["YOUTUBE_REFRESH_TOKEN"],
         token_uri="https://oauth2.googleapis.com/token",
