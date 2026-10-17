@@ -86,6 +86,7 @@ class StudioV4Tests(unittest.TestCase):
         manifest={"video_path":str(f),"channel_id":"UCdQu7MU5dHhaClhkCdG2BKg",
                   "privacyStatus":"private","title":"Title",
                   "description":"Source-cited description", "made_for_kids":False,
+                  "contains_synthetic_media":True,
                   "approved_for_publish":False}
         path=self.folder/"manifest.json";path.write_text(json.dumps(manifest))
         with self.assertRaises(SystemExit):
