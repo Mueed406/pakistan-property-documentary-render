@@ -53,13 +53,13 @@ jobs:
         run: |
           npm run build
           npm run validate
-      - name: Film 90 moving frames of original rigged Threadjaw (not final)
-        run: npm run render -- --mode=threadjaw --start=1800 --end=1890 --width=360 --height=640
-      - name: Verify actual H264 video frame count
+      - name: Film 120 moving frames at 540x960 with original rig (not final)
+        run: npm run render -- --mode=threadjaw --start=1800 --end=1920 --width=540 --height=960
+      - name: Verify actual 120-frame H264 video
         run: |
-          CLIP=$(find output -maxdepth 1 -name 'THREADJAW_ORIGINAL_90FRAMES_1800_1890_NOT_FINAL_*.mp4' | head -1)
+          CLIP=$(find output -maxdepth 1 -name 'THREADJAW_ORIGINAL_120FRAMES_1800_1920_NOT_FINAL_*.mp4' | head -1)
           test -n "$CLIP"
-          node scripts/check_proof.mjs "$CLIP" 90
+          node scripts/check_proof.mjs "$CLIP" 120
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -69,5 +69,7 @@ jobs:
             films/the-last-toy-shift/public/assets/pbr/CC0_rusty_metal_sheet_asset_manifest.json
             films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*.mp4
             films/the-last-toy-shift/output_threadjaw_builder.log
+            films/the-last-toy-shift/output/Threadjaw_Original_Editable_Model.blend
+            films/the-last-toy-shift/output/threadjaw_asset_manifest.json
           retention-days: 7
           if-no-files-found: ignore

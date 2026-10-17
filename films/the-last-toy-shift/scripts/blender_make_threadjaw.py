@@ -109,7 +109,7 @@ def tube(name,point_a,point_b,radius_a,radius_b,material,bone,steps=14):
     return skin(obj,bone)
 
 # Masses/volume anatomically coherent, long arms with plush limb joints.
-ellipsoid("FullVolumeChest",(0,0,2.33),(.55,.39,.83),fur_blue,"body",32,22)
+ellipsoid("FullVolumeChest",(0,0,2.33),(.425,.305,.76),fur_blue,"body",32,22)
 ellipsoid("NeckCuff",(0,0,3.03),(.27,.27,.26),fur_light,"neck")
 ellipsoid("StitchedHead",(0,-.035,3.48),(.46,.405,.49),fur_blue,"head",32,20)
 ellipsoid("SoftMuzzle",(0,-.32,3.28),(.365,.13,.19),fur_light,"head",26,14)
@@ -119,7 +119,7 @@ ellipsoid("MouthBlackCenter",(0,-.509,3.252),(.274,.02,.155),mouth,"jaw",24,14)
 
 for side in (-1,1):
     s="L" if side<0 else "R"
-    ellipsoid("Shoulder_"+s,(side*.62,0,2.74),(.24,.25,.31),fur_light,"arm_"+s)
+    ellipsoid("Shoulder_"+s,(side*.62,0,2.74),(.215,.22,.29),fur_light,"arm_"+s)
     tube("UpperArm_"+s,(side*.62,0,2.75),(side*.82,0,2.07),.216,.172,fur_blue,"arm_"+s)
     ellipsoid("ElbowSocket_"+s,(side*.81,0,2.10),(.185,.19,.20),fur_light,"arm_"+s)
     tube("LowerArm_"+s,(side*.81,0,2.08),(side*.97,-.015,1.29),.16,.195,fur_blue,"forearm_"+s)
@@ -127,7 +127,7 @@ for side in (-1,1):
     for k in range(3):
         tube("Finger_%s_%i"%(s,k),(side*(.88+.11*k),-.135,1.085),
              (side*(.90+.11*k),-.31,1.00),.056,.028,fur_blue,"palm_"+s,8)
-    ellipsoid("Hip_"+s,(side*.29,0,1.63),(.28,.27,.32),fur_blue,"thigh_"+s)
+    ellipsoid("Hip_"+s,(side*.29,0,1.63),(.222,.228,.29),fur_blue,"thigh_"+s)
     tube("LegUpper_"+s,(side*.29,0,1.55),(side*.37,0,.86),.24,.185,fur_blue,"thigh_"+s)
     ellipsoid("Knee_"+s,(side*.36,0,.87),(.19,.19,.21),fur_light,"thigh_"+s)
     tube("LegLower_"+s,(side*.37,0,.84),(side*.38,0,.19),.175,.17,fur_blue,"shin_"+s)
@@ -177,14 +177,14 @@ def tufts(name,center,radii,bone,count,spread=.05):
     ob=bpy.data.objects.new(name,mesh);bpy.context.collection.objects.link(ob)
     mesh.materials.append(fur_blue)
     skin(ob,bone)
-tufts("TorsoFabricFibers",(0,0,2.33),(.547,.385,.823),"body",1350)
+tufts("TorsoFabricFibers",(0,0,2.33),(.424,.302,.758),"body",1350)
 tufts("HeadFabricFibers",(0,-.035,3.48),(.461,.405,.492),"head",750)
 for side in (-1,1):
     s="L" if side<0 else "R"
-    tufts("ShoulderFiber_"+s,(side*.62,0,2.74),(.24,.25,.31),"arm_"+s,150)
+    tufts("ShoulderFiber_"+s,(side*.62,0,2.74),(.213,.218,.286),"arm_"+s,150)
     tufts("ElbowFiber_"+s,(side*.81,0,2.10),(.185,.19,.20),"arm_"+s,100)
     tufts("HandFiber_"+s,(side*1.0,-.04,1.17),(.224,.19,.23),"palm_"+s,140)
-    tufts("HipFiber_"+s,(side*.29,0,1.63),(.28,.27,.32),"thigh_"+s,140)
+    tufts("HipFiber_"+s,(side*.29,0,1.63),(.22,.225,.288),"thigh_"+s,140)
     tufts("KneeFiber_"+s,(side*.36,0,.87),(.19,.19,.21),"thigh_"+s,90)
 
 # Finishing model-only skin/weight checks before animation.
@@ -268,6 +268,23 @@ except TypeError:
     # Exporter API variants: retry only a documented optional argument.
     kwargs.pop("export_apply",None)
     bpy.ops.export_scene.gltf(**kwargs)
-print("ORIGINAL_THREADJAW_GENERATED",output,os.stat(output).st_size,
-      "bytes, skinned objects",len(created),"polygons",
-      sum(len(ob.data.polygons) for ob in created))
+import json,hashlib
+blend_path=os.path.join("output","Threadjaw_Original_Editable_Model.blend")
+os.makedirs("output",exist_ok=True)
+bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(blend_path))
+meta={
+ "generator":"scripts/blender_make_threadjaw.py",
+ "model":"Threadjaw (original toy-factory stalker, NOT official Poppy Playtime game asset)",
+ "mesh_groups":len(created),
+ "polygons":sum(len(ob.data.polygons) for ob in created),
+ "armature_bones":len(arm.bones),
+ "nla_names":[t.name for t in rig.animation_data.nla_tracks],
+ "glb_bytes":os.stat(output).st_size,
+ "glb_sha256":hashlib.sha256(open(output,"rb").read()).hexdigest(),
+ "editable_blend":blend_path,
+ "license":"Original project-authored non-canon character; no extracted game content",
+ "not_final":"Rendering and artistic approval pending"
+}
+with open("output/threadjaw_asset_manifest.json","w") as manifest:
+ json.dump(meta,manifest,indent=2)
+print("ORIGINAL_THREADJAW_GENERATED",json.dumps(meta))
