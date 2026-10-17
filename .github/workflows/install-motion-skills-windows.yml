@@ -1,0 +1,40 @@
+name: Verify full motion skill installation on Windows AI agents
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/install-motion-skills-windows.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real_windows_skills_installation:
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Prepare Windows FFmpeg
+        shell: pwsh
+        run: |
+          if(-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) {choco install ffmpeg -y --no-progress}
+      - name: Install eight motion skills for supported AI coding agents
+        shell: pwsh
+        run: |
+          & .\windows\Install-MotionSkills.ps1 -Install -Advanced
+          if($LASTEXITCODE -ne 0){throw "Agent skill installer failed"}
+      - name: Confirm each skill actually installed with source metadata
+        shell: pwsh
+        run: |
+          $names=@('motion-graphic','remotion-motion-graphics','motion-art-direction','shot-composition','beat-sync-editing','hyperframes-animation','hyperframes-cli','faceless-explainer')
+          foreach($name in $names) {
+            $a = Test-Path ".claude/skills/$name/SKILL.md"
+            $b = Test-Path ".agents/skills/$name/SKILL.md"
+            if(-not ($a -or $b)) { throw "Missing installed motion skill: $name" }
+            Write-Host "VERIFIED: $name"
+          }
