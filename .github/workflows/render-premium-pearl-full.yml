@@ -1,0 +1,155 @@
+name: PPG Premium Pearl — Full 410s 24-Motion Documentary
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/render-premium-pearl-full.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  render_scenes:
+    name: Render six distinct motion scenes per runner
+    runs-on: windows-2025
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [0,1,2,3]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install frame-accurate browser renderer
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)){choco install ffmpeg -y --no-progress}
+          npm.cmd install --prefix browser_motion --no-audit --no-fund
+          node --check browser_motion/render.mjs
+      - name: Render six different full-resolution premium white / silver sequences
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force premium_motion | Out-Null
+          $first = [int]("${{ matrix.group }}") * 6
+          $last = $first + 5
+          foreach ($i in $first..$last) {
+            $name = "{0:d2}" -f $i
+            Write-Host "PEARL MOTION SCENE $name / 24; TRUE FULL HD 25FPS"
+            node browser_motion/render.mjs browser_motion/premium_pearl_motion.html --out "premium_motion/premium_$name.mp4" --scene $i --width 1920 --height 1080 --fps 25 --seconds 6 --pixel-format yuv444p
+            if($LASTEXITCODE -ne 0){throw "Failed rendering scene $name"}
+            $file = "premium_motion/premium_$name.mp4"
+            if(-not (Test-Path $file)){throw "Missing scene video $file"}
+          }
+      - name: Save editable 1080p motion chapters for picture editing
+        uses: actions/upload-artifact@v4
+        with:
+          name: pearl-chapters-group-${{ matrix.group }}
+          path: premium_motion/premium_*.mp4
+          retention-days: 7
+          if-no-files-found: error
+
+  assemble_film:
+    name: Composite 24 motion chapters over real softened stock footage
+    needs: render_scenes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 135
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install fast licensed FFmpeg editor and visual QC dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-core fonts-noto-extra
+          python -m pip install "Pillow>=10,<13"
+          python -m py_compile browser_motion/premium_full_assemble.py editorial/full_film_qc.py
+      - name: Restore 410-second original moving-stock documentary and time-aligned Urdu SRT
+        uses: actions/download-artifact@v4
+        with:
+          name: pakistan-property-urdu-stock-documentary
+          run-id: 38962816235
+          github-token: ${{ github.token }}
+          path: baseline
+      - name: Restore twenty-four actual high-quality browser renders
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pearl-chapters-group-*
+          merge-multiple: true
+          path: premium_motion
+      - name: Validate all 24 distinct motion scenes before expensive assembly
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,subprocess
+          names=[Path('premium_motion')/f'premium_{i:02}.mp4' for i in range(24)]
+          for p in names:
+              assert p.is_file() and p.stat().st_size>50000,p
+              info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(p)]))
+              v=next(x for x in info['streams'] if x['codec_type']=='video')
+              assert (v['width'],v['height'])==(1920,1080),p
+              assert 5.8<float(info['format']['duration'])<6.2,p
+          print("ALL 24 DISTINCT FULL HD PEARL MOTION SCENES VERIFIED")
+          PY
+      - name: Fully re-edit 6m50 film — live footage with blur behind clean premium animation
+        run: |
+          python -u browser_motion/premium_full_assemble.py             --base baseline/renders/Pakistan_Property_Stock_Documentary_FINAL.mp4             --srt baseline/urdu_timed.srt             --motion-dir premium_motion             --out renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4             --cache premium_edited_segments
+      - name: Validate 1920x1080 AAC+H264, timing, 24 story scenes
+        run: |
+          test -s renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4
+          test -s renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.report.json
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          p=Path('renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4')
+          info=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(p)]))
+          v=next(x for x in info['streams'] if x['codec_type']=='video')
+          a=next(x for x in info['streams'] if x['codec_type']=='audio')
+          d=float(info['format']['duration'])
+          report=json.loads(p.with_suffix('.report.json').read_text(encoding='utf-8'))
+          assert 408<=d<=413,(d,'incorrect documentary duration')
+          assert (v['width'],v['height'])==(1920,1080)
+          assert len(report['story'])==24
+          assert p.stat().st_size>30_000_000
+          print("PRODUCTION MP4 COMPLETE",round(d,2),'seconds, H264/AAC,',round(p.stat().st_size/1e6,1),'MB')
+          PY
+      - name: Deliver actual feature-length documentary before optional visual QC
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-PREMIUM-PEARL-24-MOTION-FULL-410s-MP4
+          path: |
+            renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4
+            renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.report.json
+            baseline/urdu_timed.srt
+            browser_motion/premium_pearl_motion.html
+          retention-days: 7
+          if-no-files-found: error
+      - name: Sample full film to detect black frames, duplicates and insufficient resolution
+        run: |
+          python -u editorial/full_film_qc.py             --video renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4             --srt baseline/urdu_timed.srt             --out renders/premium_pearl_qc
+      - name: Deliver contact sheet and detailed video engineering report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Premium-Pearl-24-Motion-Visual-Contact-Sheet
+          path: |
+            renders/premium_pearl_qc/full_review_contact_sheet.jpg
+            renders/premium_pearl_qc/full_engineering_qc.json
+            renders/premium_pearl_qc/review_*.jpg
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Save build diagnostic assets in case of interruption
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Premium-24-Motion-Build-Diagnostics
+          path: |
+            renders/*.json
+            premium_edited_segments/concatenate.txt
+          retention-days: 3
+          if-no-files-found: ignore
