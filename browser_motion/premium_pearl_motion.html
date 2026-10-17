@@ -1,0 +1,203 @@
+<!doctype html><html lang="ur" dir="rtl"><head><meta charset="utf-8"/><title>Premium Pearl Documentary Motion Plates</title>
+<style>html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#ff00ff}canvas{display:block;width:100%;height:100%}</style></head><body><canvas id="motion"></canvas>
+<script>
+(()=>{"use strict";
+const q=new URLSearchParams(location.search);
+const W=Math.max(320,Number(q.get("width"))||1920),H=Math.max(180,Number(q.get("height"))||1080);
+const scene=Math.trunc(Number(q.get("scene")||0));
+if(scene<0||scene>=24)throw Error("premium documentary accepts 24 distinct story scenes");
+const c=document.getElementById("motion"),g=c.getContext("2d",{alpha:false});c.width=W;c.height=H;
+const C={matte:"#ff00ff",paper:"#F8F8F5",white:"#FFFFFF",silver:"#EBEDF0",mist:"#DCE1E4",line:"#B7BEC5",
+ graphite:"#252B32",slate:"#626D77",muted:"#88939C",brass:"#9A8061",ink:"#171C23",rust:"#AD7966"};
+const copy=[
+["A promise on paper","A document alone does not establish a physical plot.","DOCUMENT TRAIL","record"],
+["Who owns the land?","Follow the ownership record before investing.","LAND TITLE","chain"],
+["File versus land","A booking file is not the same as an allotted parcel.","ALLOTMENT RECORD","compare"],
+["The reported figures","About 42,000 files and capacity for 6,000 plots were reported.","42,000 / 6,000","bars"],
+["Where could plots fit?","Conceptual layout; this is NOT the investigated site's map.","LAND CAPACITY","map"],
+["The capacity gap","A reported difference of approximately 36,000 requires verification.","REPORTED DIFFERENCE","number"],
+["Land is finite","Issuing more files does not create additional physical space.","PHYSICAL LIMITS","grid"],
+["Where are the boundaries?","Parcel number, location and area require independent evidence.","PLOT IDENTITY","parcel"],
+["From layout to streets","Masterplans and sales brochures are not construction proof.","ILLUSTRATIVE MODEL","architecture"],
+["Construction versus claims","Verify what has been developed at the actual location.","SITE INSPECTION","building"],
+["The documents to inspect","Official records should be verified with the issuing authority.","DOCUMENT CHECK","documents"],
+["Payments and receipts","Every payment needs a reliable, traceable record.","PAYMENT TRAIL","receipt"],
+["Investigators ask","What was sold, where is the land and who approved it?","THREE QUESTIONS","questions"],
+["An evidence trail","Follow ownership, allotment and bank records—not rumours.","EVIDENCE CHAIN","network"],
+["Who gives approval?","Registration, layout approval and development permissions differ.","APPROVAL STATUS","approval"],
+["A certificate is not everything","A single registration document is not proof for every plot.","CHECK THE NOC","certificate"],
+["Maps can mislead","Match a paper layout against authoritative land records.","MAP VERIFICATION","map"],
+["Compare the records","Check the allotment letter, receipts and physical identification.","VERIFY CROSS-REFERENCES","compare"],
+["Before transferring money","Obtain written proof rather than relying on sales pressure.","BUYER SAFETY","checklist"],
+["Step one: official status","Look up current approval from the relevant authority.","OFFICIAL RECORDS","search"],
+["Step two: plot identity","Match the actual parcel location and legal dimensions.","PARCEL CHECK","parcel"],
+["Step three: visit the site","Inspect physical land and existing construction.","SITE VISIT","building"],
+["Step four: legal review","Use an independent qualified lawyer for the documents.","LEGAL REVIEW","chain"],
+["Evidence before excitement","Verify the land, documents and permissions before buying.","FINAL CHECK","final"]
+];
+const Urdu=[
+"وعدہ کاغذ پر ہے — زمین کہاں ہے؟","اصل زمین کا مالک کون ہے؟","فائل اور پلاٹ الگ چیزیں ہیں","رپورٹ میں بیان کردہ اعداد","حقیقی زمین کی گنجائش","مبینہ فرق کی وضاحت","زمین خود نہیں بڑھتی","پلاٹ کی درست شناخت","منظور شدہ نقشہ کیا ہے؟","تعمیر کے دعووں کی جانچ","اصل دستاویزات دیکھیں","ادائیگی کا مستند ریکارڈ","تحقیقات کے اہم سوالات","ثبوت کی مکمل کڑی","اجازت دینے والا ادارہ","صرف سند کافی نہیں","نقشے کی اصل حیثیت","دستاویزات کا موازنہ","رقم دینے سے پہلے","سرکاری حیثیت چیک کریں","پلاٹ کا ریکارڈ ملائیں","موقع پر جا کر دیکھیں","قانونی جانچ کروائیں","پہلے ثبوت، پھر فیصلہ"
+];
+const U=(x)=>Math.max(0,Math.min(1,x)),E=(a,b,t)=>{const k=U((t-a)/(b-a));return k*k*(3-2*k)};
+const drawR=(x,y,w,h,clr,r=0)=>{g.fillStyle=clr;if(r){g.beginPath();g.roundRect(x,y,w,h,r);g.fill()}else g.fillRect(x,y,w,h)};
+const ln=(x,y,u,v,col=C.line,lw=2)=>{g.strokeStyle=col;g.lineWidth=lw;g.beginPath();g.moveTo(x,y);g.lineTo(u,v);g.stroke()};
+const txt=(label,x,y,size,color=C.graphite,align="left",bold=600,font="Arial,sans-serif")=>{
+g.font=bold+" "+size+"px "+font;g.fillStyle=color;g.textAlign=align;g.textBaseline="middle";g.fillText(label,x,y);
+};
+const poly=(v,fill,stroke=null)=>{g.beginPath();g.moveTo(v[0][0],v[0][1]);v.slice(1).forEach(p=>g.lineTo(p[0],p[1]));g.closePath();g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}};
+const fnU='"Noto Naskh Arabic","Segoe UI",sans-serif';
+function editorialBase(t){
+  const en=E(.03,.68,t),y=(1-en)*38;
+  drawR(65,60,1790,646,C.paper,8);
+  // An actual motion plate is paper on live blurred moving footage, not a dark dashboard.
+  drawR(65,60,9,646,C.brass);
+  drawR(95,83,54,5,C.brass,2);
+  txt("PAKISTAN PROPERTY GROUP  /  INVESTIGATIVE EXPLAINER",166,89,20,C.slate,"left",600);
+  txt(("CHAPTER "+String(scene+1).padStart(2,"0"))+" / 24",1790,90,20,C.muted,"right",600);
+  g.globalAlpha=en;
+  txt(copy[scene][0],117,193+y,64,C.ink,"left",700);
+  txt(copy[scene][2],117,256+y,20,C.brass,"left",700);
+  const title=Urdu[scene];
+  txt(title,1795,268+y,39,C.graphite,"right",700,fnU);
+  g.globalAlpha=1;
+  ln(118,308,1790,308,C.mist,2);
+  txt(copy[scene][1],119,665,23,C.slate,"left",500);
+  txt("ILLUSTRATIVE • SOURCE-ATTRIBUTED REPORTING • NOT A COURT FINDING",1790,665,17,C.muted,"right",600);
+}
+function bargraph(t){const rise=E(.95,3.65,t);
+  const start=146,base=583,max=1180;
+  [0,1,2,3,4].forEach(i=>ln(start,354+i*51,start+max,354+i*51,C.mist,1));
+  const big=rise*930,small=rise*133;
+  drawR(start,408,big,58,C.graphite,4);drawR(start,501,small,58,C.brass,4);
+  txt(Math.round(42000*rise).toLocaleString("en-US"),start+big+15,437,44,C.ink);
+  txt(Math.round(6000*rise).toLocaleString("en-US"),start+small+15,530,44,C.graphite);
+  txt("REPORTED FILES",145,389,18,C.slate);txt("REPORTED PLOT CAPACITY",145,482,18,C.slate);
+  txt("Reported figures: allegations, subject to verification",1342,560,18,C.muted,"right");
+}
+function parcel(t,variant=0){
+ const k=E(.65,3.5,t);const dx=variant?870:1012,dy=530,scale=variant?21:23;
+ const P=(x,y,h=0)=>[dx+(x-y)*scale,dy+(x+y)*scale*.56-h*25];
+ for(let row=9;row>=0;row--)for(let col=9;col>=0;col--){
+  const active=(col+row*7+scene)%8===0,pr=E(.4+(col+row)*.045,2.9,t);
+  if(pr<.02)continue;
+  const x=col*2.55,y=row*2.55,h=active?1.8*k:0.18*k;
+  const a=P(x,y,h),b=P(x+2.2,y,h),c=P(x+2.2,y+2.2,h),d=P(x,y+2.2,h);
+  const side=P(x+2.2,y+2.2,0);
+  poly([b,c,side,P(x+2.2,y,0)],active?"#8B979F":"#CCD2D5");
+  poly([a,b,c,d],active?C.brass:C.silver,active?C.graphite:C.line);
+ }
+ txt(variant?"DOCUMENT DOES NOT CREATE MORE LAND":"CONCEPTUAL PARCEL GRID",156,567,25,C.slate);
+}
+function papers(t){
+ const k=E(.7,3.1,t),N=9;
+ for(let i=0;i<N;i++){
+  const vis=E(.62+i*.13,2.45+i*.12,t);
+  const x=740+i*46-(1-vis)*175,y=372+i*19-(1-vis)*30;
+  g.save();g.translate(x,y);g.rotate((i-4)*.035);g.globalAlpha=vis;
+  drawR(0,0,290,204,i%3===0?C.silver:C.white,5);
+  g.strokeStyle=C.line;g.lineWidth=2;g.strokeRect(0,0,290,204);
+  for(let line=0;line<6;line++)drawR(25,38+line*23,230-(line%3)*30,3,line%2?C.mist:C.line,1);
+  drawR(25,172,83,6,C.brass,3);g.restore();
+ }
+ txt("DOCUMENTS",158,445,31,C.graphite);txt("≠",535,456,66,C.brass);
+}
+function architecture(t){
+ const k=E(.5,3.2,t),x0=650;
+ // Clearly illustrative CAD-style architectural elevation, not invented real footage.
+ for(let i=0;i<4;i++){
+  const x=x0+i*257,ht=(i%2?255:330)*k,y=598;
+  drawR(x,y-ht,218,ht,C.silver,3);drawR(x+218,y-ht+24,24,ht-24,C.line,1);
+  for(let f=0;f<5;f++)for(let w=0;w<3;w++){
+   const yy=y-36-f*56;if(yy<y-ht+25)continue;
+   drawR(x+22+w*65,yy,48,32,(w+f+scene)%3===0?C.brass:"#96A3AE",2);
+   drawR(x+25+w*65,yy+3,42,26,C.white,1);
+  }
+  ln(x,y-ht,x+218,y-ht,C.graphite,3);
+ }
+ txt("CONCEPTUAL BUILDING ELEVATION",165,464,24,C.graphite);
+ txt("Verify completed construction on site",165,508,22,C.slate);
+}
+function chart(t){
+ const k=E(.7,3.45,t),x=166,y=575;
+ const vals=scene%2===0?[.75,.33,.95,.41,.54,.88]:[.42,.91,.60,.77,.34,.84];
+ vals.forEach((v,i)=>{const bx=x+i*214,hh=v*195*k;drawR(bx,y-hh,124,hh,i%3===1?C.brass:C.graphite,4);
+ txt(String(i+1).padStart(2,"0"),bx+50,600,19,C.slate,"center")});
+ ln(x-10,y+1,1600,y+1,C.line,2);
+ txt("ILLUSTRATIVE DATA FLOW · NOT SITE MEASUREMENTS",1610,362,18,C.muted,"right");
+}
+function flow(t){
+ const stages=["BOOKING","ALLOTMENT","LAND TITLE","APPROVAL"],pct=E(.55,3.9,t);
+ stages.forEach((s,i)=>{const x=148+i*405,p=E(.4+i*.55,2.05+i*.55,t);
+  g.globalAlpha=p;drawR(x,418,290,122,i%2?C.silver:C.white,5);
+  g.strokeStyle=C.line;g.strokeRect(x,418,290,122);
+  txt(("0"+(i+1))+"  "+s,x+19,481,24,C.graphite);
+  if(i<3){ln(x+298,478,x+388,478,C.brass,3);}
+  g.globalAlpha=1;
+ });
+ txt("Confirm every transition with original documents",145,592,25,C.slate);
+}
+function mapline(t){
+ const k=E(.7,3.6,t);
+ const pts=[[300,555],[530,406],[720,518],[980,366],[1210,475],[1460,347],[1680,472]];
+ for(let i=1;i<pts.length;i++)ln(pts[i-1][0],pts[i-1][1],pts[i-1][0]+(pts[i][0]-pts[i-1][0])*k,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*k,C.brass,5);
+ pts.forEach((p,i)=>{const a=E(.35+i*.4,2.2+i*.4,t);g.globalAlpha=a;g.beginPath();g.arc(...p,14,0,Math.PI*2);g.fillStyle=i%2?C.graphite:C.brass;g.fill();g.globalAlpha=1});
+ txt("ABSTRACT RELATIONSHIP DIAGRAM — NOT A GEOGRAPHIC MAP",166,594,21,C.slate);
+}
+function grid(t){
+ const progress=E(.6,3.7,t);
+ for(let r=0;r<5;r++)for(let col=0;col<12;col++){
+  let p=E(.5+(r*12+col)*.035,3.8,t);
+  const x=270+col*120,y=345+r*48;
+  drawR(x,y,87*p,30,p&&(r+col+scene)%7===0?C.brass:C.mist,3);
+ }
+ txt("Each box illustrates a concept, not an actual property record",280,623,20,C.slate);
+}
+function check(t){
+ const list=["Official permission","Verified ownership","Identified land parcel","Independent legal review"];
+ list.forEach((item,i)=>{const p=E(.6+i*.5,2.25+i*.5,t),x=224+(i%2)*770,y=376+Math.floor(i/2)*133;
+ g.globalAlpha=p;drawR(x,y,675,107,C.white,6);ln(x,y,x+675,y,C.line,2);
+ g.strokeStyle=C.brass;g.lineWidth=5;g.beginPath();g.moveTo(x+30,y+50);g.lineTo(x+49,y+69);g.lineTo(x+83,y+27);g.stroke();
+ txt(item,x+111,y+57,26,C.graphite);
+ g.globalAlpha=1;});
+}
+function dossier(t){
+ const k=E(.55,3.5,t);
+ drawR(412,365,380,244,C.white,5);drawR(827,408,360,195,C.silver,5);
+ for(let i=0;i<6;i++)ln(447,411+i*30,728-i%2*44,411+i*30,C.line,2);
+ for(let i=0;i<5;i++)ln(860,449+i*28,1140-i%2*65,449+i*28,C.line,2);
+ ln(802,490,827,490,C.brass,5);
+ txt("RECORDS",620,352,22,C.slate,"center");
+ txt("SOURCE CHECK",1010,639,22,C.brass,"center");
+ g.save();g.globalAlpha=k;g.strokeStyle=C.brass;g.lineWidth=5;g.beginPath();g.arc(1335,485,104,0,Math.PI*2);g.stroke();ln(1409,559,1492,636,C.graphite,8);g.restore();
+}
+function giantNumber(t){
+ const p=E(.6,3.9,t),isDiscrepancy=[5,6,17].includes(scene);
+ txt(Math.round((isDiscrepancy?36000:42000)*p).toLocaleString("en-US"),185,468,153,C.graphite,"left",800);
+ txt(isDiscrepancy?"REPORTED APPROXIMATE DISCREPANCY":"REPORTED TOTAL FILES",200,558,29,C.brass);
+ ln(150,597,1610,597,C.line,3);
+}
+const modes=["papers","flow","papers","chart","parcel","giant","grid","parcel","architecture","architecture",
+"dossier","flow","flow","map","flow","dossier","map","chart","check","flow","parcel","architecture","check","giant"];
+function frame(sec){
+ g.setTransform(W/1920,0,0,H/1080,0,0);
+ drawR(0,0,1920,1080,C.matte);
+ editorialBase(sec);
+ const mode=modes[scene];
+ if(mode==="papers")papers(sec);
+ if(mode==="flow")flow(sec);
+ if(mode==="chart")bargraph(sec);
+ if(mode==="parcel")parcel(sec,scene%2);
+ if(mode==="architecture")architecture(sec);
+ if(mode==="dossier")dossier(sec);
+ if(mode==="map")mapline(sec);
+ if(mode==="grid")grid(sec);
+ if(mode==="check")check(sec);
+ if(mode==="giant")giantNumber(sec);
+ // A thin platinum timeline progresses across the story plate, no bouncy UI.
+ drawR(119,697,1660*E(0,6,sec),4,C.brass);
+}
+window.renderAt=t=>frame(Number(t)||0);
+window.motionInfo={width:W,height:H,scene,duration:6.0,graphic:"pearl-sliver over blurred real footage",chroma:C.matte};
+document.fonts.ready.then(()=>{frame(0);window.__ready=true;});
+})();
+</script></body></html>
