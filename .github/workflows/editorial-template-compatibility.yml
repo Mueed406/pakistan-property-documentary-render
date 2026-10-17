@@ -1,0 +1,27 @@
+name: Editorial Template Asset Compatibility (no raw media redistribution)
+on:
+  pull_request:
+    paths:
+      - 'editorial_collage/templates/**'
+      - '.github/workflows/editorial-template-compatibility.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit-actual-free-pack:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch official creator-provided free animation pack and validate ZIP
+        run: python editorial_collage/templates/audit_free_premiumbeat.py --out template_compatibility_report.json
+      - name: Upload safe TEXT report only — creator media is NOT redistributed
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-PremiumBeat-Free-Template-Compatibility-Report
+          path: template_compatibility_report.json
+          retention-days: 7
+          if-no-files-found: error
