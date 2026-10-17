@@ -123,7 +123,7 @@ def build(base,subs,motion,blender,target,work):
        "note":"Piper synthetic narration retained from working baseline; NOT voice-approved final.",
        "editorial_windows":windows,"creative_review_required":True}
  target.with_suffix(".qc.json").write_text(json.dumps(info,ensure_ascii=False,indent=2),encoding="utf-8")
- print("COMPLETE FULL LENGTH HD REVIEW",json.dumps(info,ensure_ascii=False),flush=True)
+ print("COMPLETE FULL LENGTH HD REVIEW",json.dumps(info,ensure_ascii=True),flush=True)
 
 if __name__=="__main__":
  p=argparse.ArgumentParser()
