@@ -48,3 +48,6 @@ The full video quality upgrade remains subject to human audio/artistic QA,
 particularly Urdu subtitle occlusion during transitions; avoid crossing a
 claim-critical numeral reveal. Fonts, copyright, case evidence and source
 truthfulness rules from the previous documentary skill remain mandatory.
+## Expanded preview quality check (43.2 seconds)
+
+An additional actual continuity test applied **all five** presets to a 43.2s segment at 960x540 /60fps, preserving 2,592 video frames and AAC audio. This test surfaced and corrected a container-vs-video duration discrepancy; exact video `nb_frames` now defines frame count. The 43s test is a visual-review artifact, not a full-resolution final video.
