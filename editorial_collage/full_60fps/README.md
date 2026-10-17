@@ -1,0 +1,7 @@
+# Pakistan Property Group — Full 1080p60 Editorial Film
+
+Production source for a 410.4-second original-Urdu documentary with 50 native 60fps editorial-collage motion scenes. This is an investigative documentary **review edition**, not a court judgment. The new art is generated as separate 1920x1080 photographic and textured-paper layers; motion originates at 60 unique generated frames per second. Original licensed stock master is 25fps and is merely conformed to 60fps, not artificially transformed into true 60fps captured footage. Paper-map drawings are illustrative.
+
+The workflow downloads the verified baseline artifact from run 38962816235 and four CC0 stills from run 39002227657. Film soundtrack and narration are sourced from the original master; the Gemini full voice attempt returned 429 at segment eight and is not silently replaced. All 50 inserts attach to fixed Urdu subtitle cue numbers; original subtitles appear on stock footage and are deliberately re-rendered over inserted editorial art.
+
+Run using .github/workflows/ppg-editorial-full-60fps.yml, with GitHub Actions manual dispatch or an eligible same-repository pull request. It renders ten scenes per group using five Linux workers, then assembles and validates the complete movie and publishes an *unlisted review prerelease* MP4 to GitHub Releases. Source media and stock licenses must be checked before public YouTube distribution. Never misrepresent generic photos of officials/people, construction sites or documents as evidence in the particular investigation.

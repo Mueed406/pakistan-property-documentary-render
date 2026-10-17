@@ -1,0 +1,123 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>PPG Editorial Motion — Original Documentary Collage</title>
+<style>html,body{margin:0;padding:0;background:#ff00ff;overflow:hidden}canvas{display:block;width:100vw;height:100vh}</style></head>
+<body><canvas id="stage" width="1280" height="720"></canvas><script>
+'use strict';
+// Original layered documentary collage study: all scene timings are frame-driven.
+// Do not use source footage to suggest it depicts alleged wrongdoing.
+const W=1280,H=720,c=document.getElementById('stage'),g=c.getContext('2d',{alpha:false});
+const paper='#ede9dc', ink='#1d2224', red='#b83a35', yellow='#f1cb4b',mid='#5f625f', ivory='#f7f2e5', magenta='#ff00ff';
+const A={};let ready=false;
+const names=['islamabad','sold_sign','consultation','paperwork','filing','development','paper','halftone','newsprint'];
+Promise.all(names.map(n=>new Promise((res,rej)=>{let im=new Image();im.onload=()=>{A[n]=im;res()};im.onerror=rej;im.src='assets/'+n+(n==='paper'||n==='halftone'||n==='newsprint'?'.png':'.jpg')}))).then(()=>{ready=true;window.__ready=true});
+function clamp(x,a=0,b=1){return Math.max(a,Math.min(b,x))}function S(a,b,t){let x=clamp((t-a)/(b-a));return x*x*(3-2*x)}
+function wave(t,k=.5){return Math.sin(t*k)}
+function txt(s,x,y,size=30,color=ink,font='700 "Liberation Sans",Arial,sans-serif',align='left',stroke=0){
+ g.save();const weight=/^(\d{3})\s/.exec(font)?.[1]||'700';const family=font.replace(/^\d{3}\s*/,'');
+ g.font=`${weight} ${size}px ${family}`;g.textBaseline='top';g.fillStyle=color;g.textAlign=align;
+ if(stroke){g.lineWidth=stroke;g.strokeStyle='#fff';g.strokeText(s,x,y)}g.fillText(s,x,y);g.restore()
+}
+function filled(x,y,w,h,color,r=0){g.fillStyle=color;if(r){g.beginPath();g.roundRect(x,y,w,h,r);g.fill()}else g.fillRect(x,y,w,h)}
+function line(x1,y1,x2,y2,col=ink,w=2){g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.lineWidth=w;g.strokeStyle=col;g.stroke()}
+function paperBackdrop(t,shade=false){
+ g.save();g.fillStyle='#ff00ff';g.fillRect(0,0,W,H);
+ // Edged deckled paper over moving footage, excluding subtitle-safe lower strip.
+ g.save();g.shadowColor='rgba(0,0,0,.40)';g.shadowBlur=22;g.shadowOffsetY=10;
+ g.beginPath();g.moveTo(0,0);g.lineTo(W,0);g.lineTo(W,534);
+ for(let x=W;x>=0;x-=22){g.lineTo(x,528+5*Math.sin(x*.062+t*.16)+3*Math.sin(x*.23));}
+ g.lineTo(0,0);g.closePath();g.fillStyle=shade?'#e7e4da':'#f2eee2';g.fill();g.restore();
+ g.globalAlpha=.34;g.drawImage(A.paper,0,0,W,540);g.globalAlpha=.16;g.drawImage(A.halftone,0,0,760,520);g.globalAlpha=1;
+ for(let y=19;y<500;y+=57){line(23,y,1258,y,'rgba(50,47,42,.055)',1)}
+ g.restore();
+}
+function polaroid(name,x,y,w,h,t,ang=0,zoom=1){
+ g.save();g.translate(x+w/2,y+h/2);g.rotate(ang+Math.sin(t*.7+x*.01)*.004);g.scale(zoom,zoom);g.translate(-w/2,-h/2);
+ g.shadowColor='rgba(0,0,0,.32)';g.shadowBlur=17;g.shadowOffsetY=9;filled(-10,-12,w+20,h+24,ivory);g.shadowBlur=0;g.shadowOffsetY=0;
+ const im=A[name];g.drawImage(im,0,0,w,h);g.fillStyle='rgba(36,28,20,.06)';g.fillRect(0,0,w,h);
+ g.lineWidth=2;g.strokeStyle='rgba(20,19,20,.35)';g.strokeRect(0,0,w,h);
+ g.globalAlpha=.18;g.drawImage(A.halftone,0,0,w,h);g.globalAlpha=1;
+ g.restore();
+}
+function paperSlip(x,y,w,h,t,rot=0){g.save();g.translate(x,y);g.rotate(rot);g.shadowColor='rgba(0,0,0,.2)';g.shadowBlur=12;g.shadowOffsetY=4;filled(0,0,w,h,ivory);g.shadowBlur=0;g.shadowOffsetY=0;g.strokeStyle='#b9b0a2';g.strokeRect(0,0,w,h);g.globalAlpha=.28;g.drawImage(A.paper,0,0,w,h);g.globalAlpha=1;g.restore();}
+function markCircle(cx,cy,rx,ry,p=1,color=red,lw=7,phase=0){g.save();g.beginPath();g.ellipse(cx,cy,rx,ry,phase,0,Math.PI*2*S(0,1,p));g.strokeStyle=color;g.lineWidth=lw;g.lineCap='round';g.stroke();g.restore()}
+function arrow(x1,y1,x2,y2,t,color=red,weight=5){let p=S(0,1,t);g.save();g.strokeStyle=color;g.lineWidth=weight;g.lineCap='round';g.lineJoin='round';g.beginPath();g.moveTo(x1,y1);g.quadraticCurveTo(x1+60,y1-62,x1+(x2-x1)*p,y1+(y2-y1)*p);g.stroke();if(p>.92){g.beginPath();g.moveTo(x2-13,y2-12);g.lineTo(x2,y2);g.lineTo(x2-17,y2+3);g.stroke()}g.restore()}
+function yellowBrush(x,y,w,h,t){g.save();g.globalAlpha=S(0,.44,t);g.translate(x,y);g.rotate(-.012);filled(0,0,w,h,yellow);for(let i=0;i<20;i++)filled(w-2+i*.65,(i*11)%h,20,3,yellow);g.restore()}
+function editorialHeader(t,tag='PAKISTAN PROPERTY GROUP   /   VISUAL EXPLAINER'){
+ txt(tag,54,23,15,mid,'700 "Liberation Sans",Arial,sans-serif');line(54,51,1226,51,'rgba(20,20,20,.42)',1);
+ filled(1097,20,129,29,ink);txt('MAY 2026',1161,25,17,ivory,'700 "Liberation Sans",Arial,sans-serif','center');
+}
+function revealed(t,on,off){return S(on,on+.55,t)*(1-S(off-.48,off,t));}
+function sceneOne(t){let p=S(.05,.7,t),drift=.5*Math.sin(t*.55);
+ paperBackdrop(t);editorialHeader(t);
+ // Monumental editorial typesetting, not a plain rectangular statistics card.
+ g.save();g.globalAlpha=p;
+ polaroid('islamabad',645+70*(1-p),85,566,330,t,-.04,.98+S(0,7,t)*.065);
+ paperSlip(728,401,411,77,t,.034);txt('ISLAMABAD / REPORTED CASE',744,422,19,ink);
+ // Newspaper cutout vertically offset and staggered relative to photo.
+ polaroid('sold_sign',499,266,273,183,t,.075,1);
+ txt('REPORTED',61,85,34,red,'800 "Liberation Sans",Arial,sans-serif');
+ yellowBrush(54,135,552,91,t-.12);txt('42,000',59,132,105,ink,'800 "Liberation Sans",Arial,sans-serif');
+ txt('PLOT FILES',59,247,48,ink,'800 "Liberation Sans",Arial,sans-serif');
+ txt('A QUESTION OF',60,319,32,mid,'700 "Liberation Sans",Arial,sans-serif');
+ txt('LAND CAPACITY',60,360,47,ink,'800 "Liberation Sans",Arial,sans-serif');
+ markCircle(301,177,256,50,S(1.5,3.3,t),red,6,-.05);
+ arrow(550,253,675,334,S(2.3,3.7,t),red,6);
+ txt('FIGURES ATTRIBUTED TO MAY 2026 REPORTING',62,456,15,mid);
+ txt('ILLUSTRATIVE FOOTAGE · NOT THE INVESTIGATED SITE',62,484,13,mid);
+ g.restore();
+}
+function sceneTwo(t){let u=t-8.61,p=S(.05,.66,u);paperBackdrop(t,true);editorialHeader(t,'PROPERTY FILES   /   LAND CAPACITY');
+ g.save();g.globalAlpha=p;
+ polaroid('filing',63,103,475,300,t,-.055,1+u*.004);
+ polaroid('development',781,95,430,268,t,.045,1+u*.005);
+ // 2 compared typographic strips with marker-ink navigation.
+ filled(48,369,574,126,ivory);filled(677,367,565,128,ink);
+ yellowBrush(69,388,358,58,u-.5);
+ txt('42,000',86,378,88,ink,'800 "Liberation Sans",Arial,sans-serif');
+ txt('REPORTED FILES',85,470,17,ink);
+ txt('≈ 6,000',699,375,84,ivory,'800 "Liberation Sans",Arial,sans-serif');
+ txt('INDICATED PLOT CAPACITY',705,470,17,ivory);
+ markCircle(972,430,243,60,S(2.0,3.9,u),red,7,.022);
+ // No fake official map: these are thumbnail illustrative parcel grids.
+ for(let r=0;r<3;r++)for(let col=0;col<11;col++){
+  let x=694+col*27,y=293+r*22,alpha=S(.65+col*.015,.85+col*.015,u);
+  g.fillStyle=`rgba(184,58,53,${.11+alpha*.28})`;g.fillRect(x,y,20,15)
+ }
+ txt('FILES ARE NOT IDENTICAL TO PHYSICAL PARCELS',63,515,15,mid);
+ g.restore();
+}
+function sceneThree(t){let u=t-14.73,p=S(.1,.65,u);paperBackdrop(t);editorialHeader(t,'HOW THE REPORTED GAP IS DESCRIBED');
+ g.save();g.globalAlpha=p;
+ polaroid('paperwork',764,99,424,293,t,.04,1+.008*u);
+ paperSlip(66,97,641,337,t,-.019);
+ yellowBrush(70,139,540,91,u-.25);txt('36,000',93,147,109,ink,'800 "Liberation Sans",Arial,sans-serif');
+ txt('REPORTED',100,278,44,red,'800 "Liberation Sans",Arial,sans-serif');
+ txt('DIFFERENCE',100,327,52,ink,'800 "Liberation Sans",Arial,sans-serif');
+ txt('42,000 files    −    6,000 plots',96,402,25,mid);
+ // Red editorial underline and annotation rather than dashboard style.
+ line(99,371,596*S(1.2,3,u),371,red,7);markCircle(344,216,263,70,S(2,4.6,u),red,7,-.026);
+ txt('NUMBERS ARE APPROXIMATE · ALLEGATIONS REPORTED',777,418,15,mid);
+ g.restore();
+}
+function sceneFour(t){let u=t-19.93,p=S(.03,.7,u);paperBackdrop(t,true);editorialHeader(t,'JOURNALISTIC DISTINCTION / CRITICAL CONTEXT');
+ g.save();g.globalAlpha=p;
+ polaroid('consultation',736,87,455,330,t,.038,1+.008*u);
+ polaroid('paperwork',905,323,296,140,t,-.06,1);
+ paperSlip(72,99,674,376,t,-.022);
+ txt('REPORTED',90,130,42,mid,'800 "Liberation Sans",Arial,sans-serif');
+ yellowBrush(91,179,586,81,u-.12);txt('ALLEGATIONS',92,172,65,ink,'800 "Liberation Sans",Arial,sans-serif');
+ txt('ARE NOT',95,284,42,mid,'800 "Liberation Sans",Arial,sans-serif');
+ txt('A VERDICT',90,330,64,red,'800 "Liberation Sans",Arial,sans-serif');
+ line(90,420,655*S(1.2,2.5,u),420,red,7);
+ txt('NO COURT FINDING IS IMPLIED BY THIS GRAPHIC',80,490,17,ink);
+ g.restore();
+}
+const cuts=[0,8.61,14.73,19.93,26.0];
+function renderAt(t){if(!ready)return;const scene=t<cuts[1]?sceneOne:t<cuts[2]?sceneTwo:t<cuts[3]?sceneThree:sceneFour;
+ scene(t);
+ // Small editorial contact-print timecode and file label.
+ g.save();g.globalAlpha=.82;filled(1056,499,171,23,ink);txt('PPG  /  EXPLAINER',1065,504,12,ivory);g.restore();
+ // Photo editor's cut/film flash only at scene boundaries.
+ for(const cut of cuts.slice(1,-1)){let dist=Math.abs(t-cut);if(dist<.13){g.save();g.globalAlpha=(.13-dist)*2.0;filled(0,0,1280,530,'#fff');g.restore()}}
+}
+window.motionInfo={name:'Original archival collage study',duration:26,frameRate:25,source:'PPG existing verified documentary',chapters:4};window.renderAt=renderAt;
+</script></body></html>

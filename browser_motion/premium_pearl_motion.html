@@ -42,7 +42,7 @@ const U=(x)=>Math.max(0,Math.min(1,x)),E=(a,b,t)=>{const k=U((t-a)/(b-a));return
 const drawR=(x,y,w,h,clr,r=0)=>{g.fillStyle=clr;if(r){g.beginPath();g.roundRect(x,y,w,h,r);g.fill()}else g.fillRect(x,y,w,h)};
 const ln=(x,y,u,v,col=C.line,lw=2)=>{g.strokeStyle=col;g.lineWidth=lw;g.beginPath();g.moveTo(x,y);g.lineTo(u,v);g.stroke()};
 const txt=(label,x,y,size,color=C.graphite,align="left",bold=600,font="Arial,sans-serif")=>{
-g.font=bold+" "+size+"px "+font;g.fillStyle=color;g.textAlign=align;g.textBaseline="middle";g.fillText(label,x,y);
+g.font=bold+" "+size+"px "+font;g.direction=(font===fnU?"rtl":"ltr");g.fillStyle=color;g.textAlign=align;g.textBaseline="middle";g.fillText(label,x,y);
 };
 const poly=(v,fill,stroke=null)=>{g.beginPath();g.moveTo(v[0][0],v[0][1]);v.slice(1).forEach(p=>g.lineTo(p[0],p[1]));g.closePath();g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=2;g.stroke()}};
 const fnU='"Noto Naskh Arabic","Segoe UI",sans-serif';
@@ -69,8 +69,8 @@ function bargraph(t){const rise=E(.95,3.65,t);
   [0,1,2,3,4].forEach(i=>ln(start,354+i*51,start+max,354+i*51,C.mist,1));
   const big=rise*930,small=rise*133;
   drawR(start,408,big,58,C.graphite,4);drawR(start,501,small,58,C.brass,4);
-  txt(Math.round(42000*rise).toLocaleString("en-US"),start+big+15,437,44,C.ink);
-  txt(Math.round(6000*rise).toLocaleString("en-US"),start+small+15,530,44,C.graphite);
+  txt("≈42,000",start+big+15,437,44,C.ink);
+  txt("≈6,000",start+small+15,530,44,C.graphite);
   txt("REPORTED FILES",145,389,18,C.slate);txt("REPORTED PLOT CAPACITY",145,482,18,C.slate);
   txt("Reported figures: allegations, subject to verification",1342,560,18,C.muted,"right");
 }
@@ -137,11 +137,42 @@ function flow(t){
  txt("Confirm every transition with original documents",145,592,25,C.slate);
 }
 function mapline(t){
- const k=E(.7,3.6,t);
- const pts=[[300,555],[530,406],[720,518],[980,366],[1210,475],[1460,347],[1680,472]];
- for(let i=1;i<pts.length;i++)ln(pts[i-1][0],pts[i-1][1],pts[i-1][0]+(pts[i][0]-pts[i-1][0])*k,pts[i-1][1]+(pts[i][1]-pts[i-1][1])*k,C.brass,5);
- pts.forEach((p,i)=>{const a=E(.35+i*.4,2.2+i*.4,t);g.globalAlpha=a;g.beginPath();g.arc(...p,14,0,Math.PI*2);g.fillStyle=i%2?C.graphite:C.brass;g.fill();g.globalAlpha=1});
- txt("ABSTRACT RELATIONSHIP DIAGRAM — NOT A GEOGRAPHIC MAP",166,594,21,C.slate);
+ const reveal=E(.50,3.25,t);
+ if(scene===13){
+  // Connected evidence chain, never a fake geographic chart.
+  const items=["OWNERSHIP","ALLOTMENT","PAYMENT","AUTHORITY"];
+  for(let i=0;i<4;i++){
+   const x=170+i*395,k=E(.35+i*.34,1.35+i*.42,t);
+   g.save();g.globalAlpha=k;
+   drawR(x,389,324,154,i%2?C.silver:C.white,5);
+   g.strokeStyle=C.line;g.lineWidth=2;g.strokeRect(x,389,324,154);
+   txt(items[i],x+18,440,26,C.graphite,"left",700);
+   for(let j=0;j<3;j++)drawR(x+18,468+j*19,220-(j%2)*60,3,C.line,1);
+   g.restore();
+   if(i<3)ln(x+333,470,x+389*reveal,470,C.brass,4);
+  }
+  txt("CONCEPTUAL EVIDENCE CHAIN · INDEPENDENT VERIFICATION REQUIRED",175,607,21,C.slate);
+  return;
+ }
+ // Conceptual paper-layout comparison, not an actual survey or official record.
+ const leftX=230,rightX=1035;
+ txt("BROCHURE / SALES DRAWING",leftX,358,23,C.graphite);
+ txt("AUTHORITY / LAND RECORD",rightX,358,23,C.graphite);
+ g.save();g.globalAlpha=reveal;
+ drawR(leftX,385,540,203,C.white,3);drawR(rightX,385,540,203,C.silver,3);
+ g.strokeStyle=C.line;g.lineWidth=2;g.strokeRect(leftX,385,540,203);g.strokeRect(rightX,385,540,203);
+ for(let row=0;row<3;row++)for(let col=0;col<7;col++){
+  const x=leftX+28+col*70,y=400+row*55;
+  drawR(x,y,52,39,(row+col)%5===0?C.brass:C.mist,2);
+  g.strokeStyle=C.line;g.strokeRect(x,y,52,39);
+ }
+ for(let i=0;i<5;i++)ln(rightX+40,414+i*32,rightX+470-(i%3)*47,414+i*32,C.line,3);
+ drawR(rightX+392,527,123,38,C.graphite,3);
+ txt("VERIFY",rightX+454,548,18,C.white,"center",700);
+ g.restore();
+ ln(leftX+570,474,rightX-38,474,C.brass,4*reveal);
+ txt("COMPARE",894,447,20,C.brass,"center");
+ txt("ILLUSTRATIVE ONLY · NOT AN ACTUAL SURVEY MAP OR OFFICIAL RECORD",235,638,20,C.slate);
 }
 function grid(t){
  const progress=E(.6,3.7,t);
@@ -172,7 +203,8 @@ function dossier(t){
 }
 function giantNumber(t){
  const p=E(.6,3.9,t),isDiscrepancy=[5,6,17].includes(scene);
- txt(Math.round((isDiscrepancy?36000:42000)*p).toLocaleString("en-US"),185,468,153,C.graphite,"left",800);
+ g.save();g.globalAlpha=E(.45,1.3,t);
+ txt(isDiscrepancy?"≈36,000":"≈42,000",185,468,153,C.graphite,"left",800);g.restore();
  txt(isDiscrepancy?"REPORTED APPROXIMATE DISCREPANCY":"REPORTED TOTAL FILES",200,558,29,C.brass);
  ln(150,597,1610,597,C.line,3);
 }

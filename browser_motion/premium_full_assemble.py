@@ -11,11 +11,34 @@ from pathlib import Path
 FPS=25
 CHAPTERS=24
 DURATION=6.0
-KEYWORDS=[
- ["زندگی بھر","وعدہ","فائل"],["مالک","زمین","ملکیت"],["فائل","پلاٹ"],["بیالیس ہزار","چھ ہزار"],["گنجائش","زمین"],["چھتیس ہزار","فرق"],
- ["کاغذی","حقیقی","فرق"],["پلاٹ نمبر","شناخت"],["نقشہ","اجازت"],["تعمیر","موجود"],["دستاویز","کاغذ"],["ادائیگی","رقم"],
- ["تحقیقات","ریکارڈ"],["الزام","سوال"],["منظوری","اتھارٹی"],["رجسٹریشن","سرٹیفکیٹ"],["اصل","منظور شدہ"],["تصدیق","موازنہ"],
- ["پیسے","فیصلہ"],["سرکاری","دفتر"],["اصل پلاٹ","ملکیت"],["موقع","زمین"],["وکیل","قانونی"],["ثبوت","پاکستان پراپرٹی"]
+# Anchored to the ORIGINAL 83-cue Pakistani Urdu SRT from the 410-second stock film.
+# Scene order is deliberately NOT numeric: editorial order follows spoken subject matter.
+# Once full Gemini audio is approved, create a new aligned cue map instead of reusing this one.
+CURATED_SCENE_CUES=[
+ (0,"آپ کے ہاتھ میں خریداری کی رسید"),
+ (1,"جب اصل زمین کی تصدیق کی باری"),
+ (2,"لیکن ایک کاغذی فائل اور زمین"),
+ (3,"مئی دو ہزار چھبیس کی رپورٹس"),
+ (4,"اس فرق کو سمجھنے"),
+ (5,"یعنی تقریباً چھتیس ہزار"),
+ (6,"اگر ایک نقشے میں محدود جگہ"),
+ (7,"اسی وجہ سے اصل ملکیتی"),
+ (8,"ایک سوسائٹی کے نقشے پر سڑکیں"),
+ (9,"اشتہار، نمائش، خوبصورت ماڈل"),
+ (10,"خبر میں درج تفصیلات"),
+ (11,"جب رقم ادا ہو جاتی ہے لیکن"),
+ (12,"رپورٹس میں تحقیقاتی ذرائع"),
+ (13,"تاہم مخصوص الزام کے بارے"),
+ (14,"سوسائٹی کی رجسٹریشن"),
+ (15,"رجسٹریشن سرٹیفکیٹ دکھائے"),
+ (16,"اگر کوئی بروشر خوبصورت"),
+ (17,"متعلقہ ادارے کی تازہ ترین حیثیت"),
+ (18,"اگر سیلز نمائندہ جلدی"),
+ (19,"سرکاری ویب سائٹ یا دفتر"),
+ (20,"فائل اور پلاٹ کا نمبر مالک"),
+ (21,"موقع پر جا کر زمین دیکھیں"),
+ (22,"بڑی رقم دینے سے پہلے"),
+ (23,"پہلے یہ معلوم کریں کہ زمین"),
 ]
 def command(cmd):
  result=subprocess.run([str(x) for x in cmd],capture_output=True,text=True,encoding="utf-8",errors="replace")
@@ -39,21 +62,30 @@ def load_subtitles(srt):
  if len(data)<40:raise RuntimeError("Not enough source-attributed Urdu subtitle cues")
  return data
 def make_cues(cues,total):
+ # Never silently fall back to uniformly spaced animations. Each segment MUST
+ # match an actual voice/subtitle phrase, with a maximum 1.5s editorial shift.
  schedule=[]
- gap=(total-22)/23.0
- previous=-100.
- for i in range(CHAPTERS):
-  target=10+i*gap
-  nearby=sorted(
-   [q for q in cues if abs(q["start"]-target)<=9 and any(k in q["text"] for k in KEYWORDS[i])],
-   key=lambda z:abs(z["start"]-target))
-  chosen=nearby[0]["start"] if nearby else target
-  at=max(previous+DURATION+4,min(total-DURATION-2,max(1,chosen)))
-  if at+DURATION>total-1:raise ValueError("Not enough room for chapter "+str(i))
-  schedule.append({"scene":i,"start":round(at,3),"duration":DURATION,
-   "spoken_context":nearby[0]["text"][:100] if nearby else "time-aligned section fallback",
-   "attribution":"conceptual graphic on stock footage, NOT actual site mapping"})
-  previous=at
+ if len(CURATED_SCENE_CUES)!=CHAPTERS or len({s for s,_ in CURATED_SCENE_CUES})!=CHAPTERS:
+  raise RuntimeError("Curated scene mapping must cover exactly 24 distinct chapters")
+ for scene,phrase in CURATED_SCENE_CUES:
+  matches=[q for q in cues if phrase in q["text"]]
+  if len(matches)!=1:
+   raise RuntimeError(f"Scene {scene}: expected one specific Urdu subtitle cue, got {len(matches)} for {phrase!r}")
+  cue=matches[0]
+  schedule.append({"scene":scene,"start":cue["start"],"duration":DURATION,
+     "spoken_context":cue["text"][:100],"attribution":"conceptual graphic, not the actual investigated site",
+     "subtitle_anchor":phrase,"sync_adjustment":0.0})
+ schedule.sort(key=lambda q:q["start"])
+ previous_end=0.0
+ for q in schedule:
+  actual=q["start"];aligned=max(actual,previous_end+0.08)
+  if aligned-actual>1.5:
+   raise RuntimeError(f"Scene {q['scene']} subtitle alignment collision ({aligned-actual:.2f}s)")
+  if aligned+DURATION>total-1:
+   raise RuntimeError(f"Scene {q['scene']} extends past actual film")
+  q["start"]=round(aligned,3)
+  q["sync_adjustment"]=round(aligned-actual,3)
+  previous_end=aligned+DURATION
  return schedule
 def clip_from(source,out,t,seconds):
  if out.exists() and out.stat().st_size>50000:return
@@ -124,6 +156,7 @@ def assemble(base,srt,graphics,out,cache,smoke=False):
   "story":schedule,"original_music_and_narration_preserved":True,
   "subtitle_lower_295px_kept_crisp":True,"stock_footage_softened_behind_animations":True,
   "voice":"Existing Piper synthetic narrator; full Gemini replacement not yet approved",
+  "subtitle_alignment":"curated original Urdu SRT; no time-only fallbacks",
   "creative_review_required":True}
  out.with_suffix(".report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
  print("PREMIUM_FULL_FILM_COMPLETE",json.dumps({k:v for k,v in report.items() if k!="story"}),flush=True)
