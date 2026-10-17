@@ -1,0 +1,50 @@
+name: Publish PPG 43s 60FPS MP4 — GitHub Release Download
+on:
+  push:
+    branches:
+      - downloads/ppg-43s-60fps-video
+    paths:
+      - .github/workflows/publish-ppg-video-release.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve already-rendered MP4 from the verified successful run
+        uses: actions/download-artifact@v4
+        with:
+          name: PPG-Editorial-43s-1080p-60FPS-MP4
+          run-id: 39006710566
+          github-token: ${{ github.token }}
+          path: release_media
+      - name: Verify retrieved movie before publishing
+        shell: bash
+        run: |
+          ls -lahR release_media
+          FILE="$(find release_media -type f -name 'PPG_Editorial_60FPS_Continuity_43s.mp4' | head -1)"
+          test -s "$FILE"
+          test "$(stat -c %s "$FILE")" -gt 15000000
+          echo "PPG_RELEASE_VIDEO=$FILE" >> "$GITHUB_ENV"
+          sha256sum "$FILE"
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height,avg_frame_rate -of json "$FILE"
+      - name: Publish actual MP4 as public GitHub prerelease attachment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create ppg-43s-60fps-review-20261017 \
+            "$PPG_RELEASE_VIDEO" \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "PPG Editorial Documentary — 43 Seconds — Full HD 60 FPS" \
+            --notes "Playable 43.235-second documentary review MP4 with existing Pakistani Urdu narration, stock-to-paper-collage-to-stock transitions, 1920x1080 H.264/AAC at 60fps. Preview only; not the 6m50 full documentary." \
+            --prerelease
+      - name: Show verified public Release URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view ppg-43s-60fps-review-20261017 --repo "${{ github.repository }}" --json url,assets --jq '{url: .url, assets: [.assets[].name]}'
