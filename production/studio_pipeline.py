@@ -150,7 +150,8 @@ def init(args) -> None:
         "premium_generation_allowed": False, "premium_budget_credits": 0,
         "youtube": {"channel_id": None, "visibility": "private",
                     "auto_publish": False, "title": args.title,
-                    "description": "", "tags": [], "made_for_kids": None},
+                    "description": "", "tags": [], "made_for_kids": None,
+                    "contains_synthetic_media": None},
         "inputs": {"source_video": None, "transcript": None, "timed_srt": None,
                    "narration": None, "music": None, "license_manifest": "rights.json",
                    "scene_plan": "storyboard.json"},
@@ -258,11 +259,14 @@ def package(args):
     youtube = spec["youtube"]
     if not youtube.get("channel_id"):
         raise RuntimeError("Choose the exact owned YouTube channel before upload packaging")
+    if youtube.get("made_for_kids") is None or youtube.get("contains_synthetic_media") is None:
+        raise RuntimeError("Set made-for-kids and altered/synthetic-media disclosures before upload packaging")
     bundle = {
         "video_path": str(video.resolve()), "video_sha256": report["sha256"],
         "channel_id": youtube["channel_id"], "privacyStatus": "private",
         "title": youtube["title"], "description": youtube["description"],
         "tags": youtube["tags"], "made_for_kids": youtube["made_for_kids"],
+        "contains_synthetic_media": youtube["contains_synthetic_media"],
         "approved_for_publish": False,
         "manual_review_required": True, "created_at": now()
     }
