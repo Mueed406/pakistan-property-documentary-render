@@ -1,0 +1,20 @@
+{
+  "title": "Pakistan Mein Property Ka Scene? — Cartoon Comedy V2",
+  "language": "ur-PK",
+  "format": "9:16 1080x1920 60fps",
+  "channel": "Pakistan Property Group",
+  "target_seconds": 45,
+  "sections": [
+    {"scene":0,"role":"narrator","urdu":"پاکستان میں پراپرٹی کا بزنس؟ بھائی، یہاں پلاٹ سے پہلے وعدے بک جاتے ہیں!","roman":"PROPERTY IN PAKISTAN?!"},
+    {"scene":1,"role":"dealer","urdu":"سر! آج فائل لے لیں، کل ریٹ ڈبل!","roman":"KAL RATE DOUBLE!"},
+    {"scene":2,"role":"buyer","urdu":"اچھا جی؟ مگر پلاٹ ہے کہاں؟","roman":"PLOT KIDHAR HAI?"},
+    {"scene":3,"role":"dealer","urdu":"نقشے میں، سر! اتنا شاندار، حقیقت بھی شرما جائے!","roman":"SIR, MAP MEIN!"},
+    {"scene":4,"role":"buyer","urdu":"این او سی ہے؟ زمین کس کے نام؟ قبضہ کب؟","roman":"NOC? OWNER? POSSESSION?"},
+    {"scene":5,"role":"dealer","urdu":"ارے سر جی! سوال بعد میں، پہلے چائے تو پی لیں!","roman":"PEHLE CHAI!"},
+    {"scene":6,"role":"narrator","urdu":"ہاہا! مذاق اپنی جگہ، لیکن پیسہ اصلی ہے!","roman":"JOKES ASIDE!"},
+    {"scene":7,"role":"narrator","urdu":"خریدنے سے پہلے لوکیشن، متعلقہ اتھارٹی کی منظوری، ملکیت، اور ادائیگی کا ریکارڈ ضرور چیک کریں۔","roman":"CHECK BEFORE YOU PAY"},
+    {"scene":8,"role":"narrator","urdu":"کیونکہ بڑا سا بورڈ، پکی گارنٹی نہیں ہوتا!","roman":"BIG BOARD ≠ GUARANTEE"},
+    {"scene":9,"role":"narrator","urdu":"پاکستان پراپرٹی گروپ! پہلے تحقیق، پھر سرمایہ کاری!","roman":"RESEARCH FIRST. INVEST SMART."}
+  ],
+  "disclaimer":"Fictional comedy. Verify approvals and ownership through the relevant local authority. Not financial or legal advice."
+}
