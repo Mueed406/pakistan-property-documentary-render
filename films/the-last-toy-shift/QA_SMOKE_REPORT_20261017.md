@@ -27,6 +27,18 @@ This records **actual executed GitHub Actions and inspected media**. It is not a
 - Inspected at t = 0.65s: first version mean RGB ~[5.6, 5.8, 10.2]; lighting-repair version ~[20.4, 32.4, 43.0] (8-bit channel averages). This records one sampled frame, not a full-scene perceptual assessment.
 - Actual preview is **not** 1080p and has no recorded English voice; DO NOT upload as a completed film or claim full 16-second proof.
 
+## 16-second motion-and-sound diagnostic — VERIFIED (technical only)
+
+- GitHub Actions: https://github.com/Mueed406/pakistan-property-documentary-render/actions/runs/39059236627
+- File: `DIAGNOSTIC_16S_LOWRES_WITH_ORIGINAL_AMBIENCE_NOT_FINAL.mp4` (download as a GitHub Actions artifact or the verified ChatGPT conversation copy).
+- Final validated by local FFprobe, OpenCV decode, and audio volume check: **960 actual decoded frames**, 270 × 480, **60/1 fps**, H.264 video + AAC stereo 48,000 Hz, exact 16.000 seconds, 2,072,321 bytes.
+- SHA-256 of that actual MP4: `62442a612a9a7834cab09f959bd39080fd358ef36d48629e615c53d5d92aedba`.
+- Frame-by-frame change scan: 960 frames, average decoded grayscale brightness **34.80/255**, zero frames with whole-frame brightness under 5, zero adjacent pairs below 0.07 mean absolute grayscale difference. This checks movement, not visual quality, geometry correctness or lighting approval.
+- Audio loudness analysis via FFmpeg volumedetect: mean **−23.2 dBFS**, peak **−5.3 dBFS**. Original synthesized mechanical atmosphere only; **NO English dialogue or music mix**.
+- Human-reviewed 11-frame contact sheet: real 3D parallax and movement, but **ARTISTIC GATE FAILED**. Character is visibly simplified round/segment geometry, conveyor is repetitive, camera work stays dominated by a straight-on view, and environments/materials/acting are below requested premium quality. No approved official/fan skinned GLBs are present.
+- **Important:** 16-second result is **270 × 480 only**. It is a diagnostic and never fulfills the mandatory native 1080 × 1920 film deliverable.
+- No 90-second film, actual English voice stems, gameplay, proprietary assets, or release-ready content was generated. Rights gating remains fail-closed.
+
 ## Defects requiring artistic work
 
 1. Replace all procedural character stand-ins with professionally sculpted, licensed, weighted skinned GLB models. Animate facial expression, gaze, feet and arms without clipping. Verified rights and proven 60fps motion required.
