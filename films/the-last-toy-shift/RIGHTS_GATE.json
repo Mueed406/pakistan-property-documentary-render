@@ -1,0 +1,78 @@
+{
+  "schema": "last-toy-shift-rights-gate-v1",
+  "release_authorized": false,
+  "publisher_policy_review": "https://www.mobentertainment.com/fan-content",
+  "note": "DO NOT set release_authorized true solely because code builds. Verify every audio, character, texture, capture and render use, including monetization.",
+  "assets": [
+    {
+      "id": "character_hero_rig",
+      "path": "public/assets/hero.glb",
+      "owner": null,
+      "source_url": null,
+      "license": null,
+      "sha256": null,
+      "approved_for_project": false,
+      "redistribution_authorized": false
+    },
+    {
+      "id": "character_creature_rig",
+      "path": "public/assets/creature.glb",
+      "owner": null,
+      "source_url": null,
+      "license": null,
+      "sha256": null,
+      "approved_for_project": false,
+      "redistribution_authorized": false
+    },
+    {
+      "id": "character_doll_rig",
+      "path": "public/assets/doll.glb",
+      "owner": null,
+      "source_url": null,
+      "license": null,
+      "sha256": null,
+      "approved_for_project": false,
+      "redistribution_authorized": false
+    },
+    {
+      "id": "hero_voice",
+      "path": "public/assets/audio/hero.wav",
+      "owner": null,
+      "source_url": null,
+      "license": null,
+      "sha256": null,
+      "approved_for_project": false,
+      "redistribution_authorized": false
+    },
+    {
+      "id": "tape_voice",
+      "path": "public/assets/audio/tape.wav",
+      "owner": null,
+      "source_url": null,
+      "license": null,
+      "sha256": null,
+      "approved_for_project": false,
+      "redistribution_authorized": false
+    },
+    {
+      "id": "doll_voice",
+      "path": "public/assets/audio/doll.wav",
+      "owner": null,
+      "source_url": null,
+      "license": null,
+      "sha256": null,
+      "approved_for_project": false,
+      "redistribution_authorized": false
+    },
+    {
+      "id": "music_and_sfx",
+      "path": "public/assets/audio/mix.wav",
+      "owner": null,
+      "source_url": null,
+      "license": null,
+      "sha256": null,
+      "approved_for_project": false,
+      "redistribution_authorized": false
+    }
+  ]
+}
