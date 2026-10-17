@@ -1,0 +1,63 @@
+name: Browser Canvas to MP4 motion proof — Windows
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - browser_motion/**
+      - .github/workflows/browser-motion-smoke.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  html_motion_render:
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Find Edge or Chrome installed on Windows
+        shell: pwsh
+        run: |
+          $edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+          $chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+          if((Test-Path $edge) -or (Test-Path $chrome)) { Write-Host "Headless browser detected" }
+          else { throw "Chrome / Edge missing" }
+      - name: Install FFmpeg for deterministic MP4 exports
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)) { choco install ffmpeg -y --no-progress }
+          ffprobe -version | Select-Object -First 1
+      - name: Install browser-only rendering dependencies
+        shell: pwsh
+        run: npm.cmd install --prefix browser_motion --no-audit --no-fund
+      - name: Validate motion renderer source
+        shell: pwsh
+        run: node --check browser_motion/render.mjs
+      - name: Render 18 deterministic animation frames into a real MP4
+        shell: pwsh
+        run: |
+          Push-Location browser_motion
+          npm.cmd run smoke
+          Pop-Location
+      - name: Verify technical MP4 and actual saved frames
+        shell: pwsh
+        run: |
+          $v = "browser_motion\out\browser-motion-smoke.mp4"
+          if (-not (Test-Path $v)) { throw "No browser MP4" }
+          ffprobe -v error -show_entries stream=codec_name,width,height -of default=noprint_wrappers=1 $v
+          if (-not (Test-Path "$v.frame0000.png")) { throw "No first-frame screenshot" }
+      - name: Upload actual HTML browser-rendered preview and review frames
+        uses: actions/upload-artifact@v4
+        with:
+          name: ppg-browser-html-canvas-motion-smoke
+          path: |
+            browser_motion/scene.html
+            browser_motion/out/browser-motion-smoke.mp4
+            browser_motion/out/*.png
+          retention-days: 7
+          if-no-files-found: error
