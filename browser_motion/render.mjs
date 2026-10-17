@@ -23,6 +23,8 @@ if(!fs.existsSync(file)||!file.toLowerCase().endsWith('.html'))throw new Error('
 const width=Number(flag('--width',1920)),height=Number(flag('--height',1080));
 const fps=Number(flag('--fps',25)),seconds=Number(flag('--seconds',7.5));
 const frames=Number(flag('--frames',Math.round(fps*seconds)));
+const pixelFormat=flag('--pixel-format','yuv420p');
+if(!['yuv420p','yuv444p'].includes(pixelFormat))throw new Error('Invalid pixel format');
 const output=path.resolve(flag('--out','browser_motion_output.mp4'));
 if(!Number.isInteger(width)||!Number.isInteger(height)||width<320||height<180||width>3840||height>2160)throw new Error('Invalid frame dimensions');
 if(!Number.isInteger(fps)||fps<12||fps>60||!Number.isInteger(frames)||frames<1||frames>3600)throw new Error('Unreasonable framerate or duration');
@@ -57,7 +59,7 @@ if(flag('--caption',''))url.searchParams.set('caption',flag('--caption',''));
  console.log('SCENE READY',info);
  ff=spawn(ffmpeg,['-hide_banner','-loglevel','error','-y',
  '-f','image2pipe','-framerate',String(fps),'-vcodec','png','-i','pipe:0',
- '-c:v','libx264','-preset','medium','-crf','18','-pix_fmt','yuv420p',
+ '-c:v','libx264','-preset','medium','-crf','18','-pix_fmt',pixelFormat,
  '-movflags','+faststart',output],{stdio:['pipe','inherit','inherit']});
  ff.on('error',e=>console.error('FFmpeg launch error',e.message));
  for(let i=0;i<frames;i++){
