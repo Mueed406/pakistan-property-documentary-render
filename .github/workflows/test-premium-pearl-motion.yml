@@ -1,0 +1,64 @@
+name: Validate premium pearl stock-blur motion composite
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/test-premium-pearl-motion.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  premium_smoke:
+    runs-on: windows-2025
+    timeout-minutes: 32
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install headless animation dependencies
+        shell: pwsh
+        run: |
+          if (-not (Get-Command ffmpeg -ErrorAction SilentlyContinue)){choco install ffmpeg -y --no-progress}
+          npm.cmd install --prefix browser_motion --no-audit --no-fund
+          node --check browser_motion/render.mjs
+          python -m py_compile browser_motion/premium_full_assemble.py
+      - name: Download actual full documentary footage and original Urdu audio
+        uses: actions/download-artifact@v4
+        with:
+          name: pakistan-property-urdu-stock-documentary
+          run-id: 38962816235
+          github-token: ${{ github.token }}
+          path: baseline
+      - name: Render premium light motion with high-quality 4:4:4 chroma matte
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path premium_motion | Out-Null
+          node browser_motion/render.mjs browser_motion/premium_pearl_motion.html --out premium_motion/premium_00.mp4 --scene 0 --width 1920 --height 1080 --fps 25 --seconds 6 --pixel-format yuv444p
+          if($LASTEXITCODE -ne 0){throw 'Browser graphics failed'}
+      - name: Composite with blurred LIVE stock and protected sharp Urdu captions
+        shell: pwsh
+        run: |
+          python -u browser_motion/premium_full_assemble.py --base baseline/renders/Pakistan_Property_Stock_Documentary_FINAL.mp4 --srt baseline/urdu_timed.srt --motion-dir premium_motion --out renders/PremiumPearl_16sec_Smoke.mp4 --cache premium_smoke_segments --smoke
+          if($LASTEXITCODE -ne 0){throw 'Premium full footage compositing test failed'}
+          ffprobe -v error -show_entries stream=width,height,codec_name -of json renders/PremiumPearl_16sec_Smoke.mp4
+      - name: Capture actual keyed and composed frames for visual approval
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path renders/review | Out-Null
+          ffmpeg -v error -y -ss 12 -i renders/PremiumPearl_16sec_Smoke.mp4 -frames:v 1 renders/review/PremiumPearl_12s.png
+          ffmpeg -v error -y -ss 14 -i renders/PremiumPearl_16sec_Smoke.mp4 -frames:v 1 renders/review/PremiumPearl_14s.png
+      - name: Upload actual preview footage and frames
+        uses: actions/upload-artifact@v4
+        with:
+          name: premium-pearl-stock-blur-documentary-preview
+          path: |
+            renders/PremiumPearl_16sec_Smoke.mp4
+            renders/PremiumPearl_16sec_Smoke.report.json
+            renders/review/*.png
+          retention-days: 7
+          if-no-files-found: error
