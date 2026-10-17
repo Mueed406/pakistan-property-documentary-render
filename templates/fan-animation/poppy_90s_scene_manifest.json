@@ -1,0 +1,228 @@
+{
+  "schema": "fan-film-scene-manifest-v1",
+  "project": "The Last Toy Shift",
+  "fan_use": "unofficial, non-canon, publisher policy conditional",
+  "narration_language": "en",
+  "final_width": 1080,
+  "final_height": 1920,
+  "framerate_num": 60,
+  "framerate_den": 1,
+  "frame_count": 5400,
+  "duration_seconds": 90,
+  "render_engine_priority": [
+    "Three.js WebGL2 + TypeScript",
+    "Blender offline hero rig/simulation",
+    "Python + Playwright for deterministic frame capture",
+    "FFmpeg for final encode only"
+  ],
+  "availability": "SHOT PLAN ONLY; ZERO ASSETS DOWNLOADED OR RENDERED",
+  "shots": [
+    {
+      "id": "shot_01",
+      "start_frame": 0,
+      "frame_count": 300,
+      "end_frame_exclusive": 300,
+      "start_seconds": 0,
+      "duration_seconds": 5,
+      "description": "The factory breathes",
+      "camera_intent": "Wide low-angle tracking past moving toy conveyor; fog shafts and silhouette in extreme background",
+      "animation_actions": "Unseen power flicker + one distant metallic footstep",
+      "audio_script_direction": "No dialogue; build tension",
+      "required_asset_keys": [
+        "factory_hall",
+        "conveyor",
+        "dust_fx"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_02",
+      "start_frame": 300,
+      "frame_count": 420,
+      "end_frame_exclusive": 720,
+      "start_seconds": 5,
+      "duration_seconds": 7,
+      "description": "The GrabPack spark",
+      "camera_intent": "First-person pull toward sparking emergency switch; wire bends with believable physics",
+      "animation_actions": "GrabPack cables extend, contact then retract; switch reacts to actual contact",
+      "audio_script_direction": "Hero: It's just another shift. Right?",
+      "required_asset_keys": [
+        "firstperson_rig",
+        "grabpack_compatible",
+        "electric_switch"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_03",
+      "start_frame": 720,
+      "frame_count": 480,
+      "end_frame_exclusive": 1200,
+      "start_seconds": 12,
+      "duration_seconds": 8,
+      "description": "All toys look up",
+      "camera_intent": "Dolly between toy pallets; eyes rotate as one; reveal animated silhouettes",
+      "animation_actions": "Sequential neck/head bones; toy pupil reflections",
+      "audio_script_direction": "Toy choir: ...",
+      "required_asset_keys": [
+        "toy_rig_generic",
+        "factory_shelving",
+        "occlusion"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_04",
+      "start_frame": 1200,
+      "frame_count": 480,
+      "end_frame_exclusive": 1680,
+      "start_seconds": 20,
+      "duration_seconds": 8,
+      "description": "The warning tape",
+      "camera_intent": "Macro cassette/CRT; diegetic video distortion in actual 3D screen",
+      "animation_actions": "Tape pulled in, motors rotate, subtitle on CRT only",
+      "audio_script_direction": "Tape voice: Don't follow the footsteps.",
+      "required_asset_keys": [
+        "cassette_player",
+        "crt",
+        "video_noise_original"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_05",
+      "start_frame": 1680,
+      "frame_count": 480,
+      "end_frame_exclusive": 2160,
+      "start_seconds": 28,
+      "duration_seconds": 8,
+      "description": "The corridor silhouette",
+      "camera_intent": "Zoom / dolly-zoom into empty doorway and Huggy Wuggy distant outline",
+      "animation_actions": "Controlled height silhouette; no nonsensical character morphing",
+      "audio_script_direction": "Hero: Who's there?",
+      "required_asset_keys": [
+        "approved_fan_character",
+        "industrial_door"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_06",
+      "start_frame": 2160,
+      "frame_count": 600,
+      "end_frame_exclusive": 2760,
+      "start_seconds": 36,
+      "duration_seconds": 10,
+      "description": "Conveyor chase",
+      "camera_intent": "Wide to handheld pursuit; conveyor and moving boxes create parallax",
+      "animation_actions": "Character real foot/arm motion; contact shadows, physical obstacles",
+      "audio_script_direction": "No narration; footfalls, impacts, panicked breathing",
+      "required_asset_keys": [
+        "rigged_huggy",
+        "conveyor",
+        "camera_track"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_07",
+      "start_frame": 2760,
+      "frame_count": 540,
+      "end_frame_exclusive": 3300,
+      "start_seconds": 46,
+      "duration_seconds": 9,
+      "description": "The door won't open",
+      "camera_intent": "Tight hands and security pad; lever fails; lights shift amber to red",
+      "animation_actions": "GrabPack contact matches keyframe, genuine cast shadows",
+      "audio_script_direction": "Hero: Come on. Open!",
+      "required_asset_keys": [
+        "door_lock",
+        "grabpack_compatible",
+        "power_fx"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_08",
+      "start_frame": 3300,
+      "frame_count": 600,
+      "end_frame_exclusive": 3900,
+      "start_seconds": 55,
+      "duration_seconds": 10,
+      "description": "The voice behind the wall",
+      "camera_intent": "Slow orbit around low-lit door and tiny doll-sized reflection",
+      "animation_actions": "Poppy presence suggested by shadow/voice; no abrupt model replacement",
+      "audio_script_direction": "Poppy: The door isn't locked to keep you out.",
+      "required_asset_keys": [
+        "approved_poppy_fan_rig",
+        "door_shaders",
+        "reflections"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_09",
+      "start_frame": 3900,
+      "frame_count": 660,
+      "end_frame_exclusive": 4560,
+      "start_seconds": 65,
+      "duration_seconds": 11,
+      "description": "Safe room trap",
+      "camera_intent": "False safety: warm light fades; walls slide / toy display turns to face lens",
+      "animation_actions": "3D layout continuous; volumetric beam and camera stabilization",
+      "audio_script_direction": "Hero (whisper): Then what's inside?",
+      "required_asset_keys": [
+        "safe_room",
+        "toy_display",
+        "surround_sfx"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_10",
+      "start_frame": 4560,
+      "frame_count": 540,
+      "end_frame_exclusive": 5100,
+      "start_seconds": 76,
+      "duration_seconds": 9,
+      "description": "The reveal",
+      "camera_intent": "Rapid movement toward camera; whip to exit, no gore",
+      "animation_actions": "Huggy silhouette emerges at correct depth then stops abruptly",
+      "audio_script_direction": "One sharp inhale + slam",
+      "required_asset_keys": [
+        "rigged_huggy",
+        "camera_lens",
+        "impact_fx"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    },
+    {
+      "id": "shot_11",
+      "start_frame": 5100,
+      "frame_count": 300,
+      "end_frame_exclusive": 5400,
+      "start_seconds": 85,
+      "duration_seconds": 5,
+      "description": "Fan title and final cue",
+      "camera_intent": "Black-frame echo, original glitch typography and final red eye; credits/disclaimer",
+      "animation_actions": "Animate original safe typography, no official company logos",
+      "audio_script_direction": "Title: THE LAST TOY SHIFT / Unofficial fan animation",
+      "required_asset_keys": [
+        "original_title",
+        "credit_text"
+      ],
+      "status": "PLANNED_UNRENDERED",
+      "human_review_required": true
+    }
+  ]
+}

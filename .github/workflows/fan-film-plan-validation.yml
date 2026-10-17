@@ -1,0 +1,31 @@
+name: Fan Film Handoff — No-Cost Plan Validation
+on:
+  pull_request:
+    paths:
+      - 'docs/poppy-fan-animation-2026/**'
+      - 'templates/fan-animation/**'
+      - 'tools/video_production/**'
+      - '.github/workflows/fan-film-plan-validation.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify planning files are parseable and timeline is gap-free
+        run: |
+          python -m py_compile tools/video_production/validate_scene_manifest.py
+          python tools/video_production/validate_scene_manifest.py
+      - name: Prove unfinished asset pipeline correctly rejects render-ready claim
+        run: |
+          if python tools/video_production/validate_scene_manifest.py --render-ready; then
+            echo "Unexpected RENDER-READY with no acquired IP-verified assets"; exit 1
+          else
+            echo "Correctly refused render-ready: missing approved local media and hashes"
+          fi
