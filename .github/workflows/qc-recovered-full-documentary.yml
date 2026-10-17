@@ -1,0 +1,48 @@
+name: Inspect recovered full-length motion documentary automatically
+
+on:
+  workflow_run:
+    workflows:
+      - Recover finished 6m50 full motion film (reuse 8 rendered HD scenes)
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  recovered_movie_qc:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install tools for Full HD output and sampled-frame analysis
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install "Pillow>=10,<13"
+      - name: Download recovered full 410-second MP4
+        uses: actions/download-artifact@v4
+        with:
+          name: PPG-Full-410sec-HD-MOTION-DOCUMENTARY
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: film
+      - name: Check 18 samples for visual diversity, black frames, captions and audio
+        run: |
+          python editorial/full_film_qc.py \
+            --video film/renders/Pakistan_Property_Full_Browser_Motion_Review.mp4 \
+            --srt film/baseline/urdu_timed.srt \
+            --out qc-output
+      - name: Upload proof-of-quality contact sheet and engineering audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-FULL-410sec-Visual-Audio-QC
+          path: |
+            qc-output/full_review_contact_sheet.jpg
+            qc-output/full_engineering_qc.json
+            qc-output/review_*.jpg
+          retention-days: 7
+          if-no-files-found: error
