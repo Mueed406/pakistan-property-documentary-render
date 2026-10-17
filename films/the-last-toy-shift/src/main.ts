@@ -13,11 +13,13 @@ declare global {
   interface Window {
     renderFrame:(index:number)=>void;
     productionReady:boolean;
-    engineStatus:{mode:string;renderer:string;frames:number;models:string[]};
+    engineStatus:{mode:string;renderer:string;frames:number;models:string[];rigging?:{skinnedMeshes:number;clips:string[];selectedClip:string}|null};
   }
 }
 
-const technicalMode=new URLSearchParams(location.search).get('mode')!=='final';
+const displayMode=new URLSearchParams(location.search).get('mode') || 'technical';
+const rigProof=displayMode==='rigproof';
+const technicalMode=displayMode!=='final';
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
 renderer.setSize(innerWidth,innerHeight);
@@ -234,23 +236,34 @@ const dust=new THREE.Points(dustGeometry,new THREE.PointsMaterial({color:0xc0d4d
 
 let importedModels:THREE.Object3D[]=[];
 let externalMixer:THREE.AnimationMixer[]=[];
-async function loadReleaseRig(url:string,position:THREE.Vector3){
+let riggingReport:{skinnedMeshes:number;clips:string[];selectedClip:string}|null=null;
+async function loadReleaseRig(url:string,position:THREE.Vector3,desiredClip='Running'){
  const gltf=await new GLTFLoader().loadAsync(url);
  let skinned=0;
  gltf.scene.traverse(o=>{if((o as THREE.SkinnedMesh).isSkinnedMesh)skinned++;});
- if(skinned===0||gltf.animations.length===0)throw new Error('FINAL RIG MUST HAVE SKINNED MESH AND ANIMATION: '+url);
+ if(skinned===0||gltf.animations.length===0)throw new Error('ANIMATED GLB must contain SkinnedMesh and skeletal clips: '+url);
+ const clip=gltf.animations.find(x=>x.name.toLowerCase()===desiredClip.toLowerCase())||gltf.animations[0];
+ gltf.scene.name=url.split('/').pop()||'animated-actor';
+ riggingReport={skinnedMeshes:skinned,clips:gltf.animations.map(x=>x.name),selectedClip:clip.name};
  gltf.scene.position.copy(position);root.add(gltf.scene);importedModels.push(gltf.scene);
  const mixer=new THREE.AnimationMixer(gltf.scene);
- const action=mixer.clipAction(gltf.animations[0]);action.play();externalMixer.push(mixer);
+ mixer.clipAction(clip).play();
+ externalMixer.push(mixer);
  return gltf.scene;
 }
 
 const planned=await fetch('/scene_manifest.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('Manifest missing. Run npm run sync.');return r.json() as Promise<Plan>});
 if(planned.frame_count!==5400||planned.shots.length!==11)throw new Error('Unvalidated manifest');
-if(!technicalMode){
- await loadReleaseRig('/assets/creature.glb',vec(0,0,-27));
- await loadReleaseRig('/assets/hero.glb',vec(1,0,-22));
- await loadReleaseRig('/assets/doll.glb',vec(-1,0,-38));
+if(rigProof){
+ // Independently LICENSED CC0 engineering actor to test true skinning/AnimationMixer.
+ // It is deliberately NOT a Poppy character and can NEVER satisfy the final-character gate.
+ const model=await loadReleaseRig('/assets/cc0_robot_expressive.glb',vec(0,0,-27),'Running');
+ model.scale.setScalar(1.15);
+ creature.rig.visible=false;
+} else if(!technicalMode){
+ await loadReleaseRig('/assets/creature.glb',vec(0,0,-27),'Running');
+ await loadReleaseRig('/assets/hero.glb',vec(1,0,-22),'Idle');
+ await loadReleaseRig('/assets/doll.glb',vec(-1,0,-38),'Idle');
  creature.rig.visible=false;
  for(const toy of toylines)toy.rig.visible=false;
 }
@@ -336,10 +349,10 @@ function renderFrame(frame:number){
  // End slate is deliberate black to preserve a separate 5-second fan disclaimer.
  if(index===10){scene.background=new THREE.Color(0x000000);root.visible=false;dust.visible=false;}
  else {scene.background=new THREE.Color(0x0b1015);root.visible=true;dust.visible=true;}
- state.textContent=technicalMode?'ORIGINAL 3D ENGINEERING STAND-IN — '+shot.id:'RELEASE RIGS — '+shot.id;
+ state.textContent=rigProof?'CC0 SKINNED ACTOR DIAGNOSTIC — NOT THE FINAL FILM':technicalMode?'ORIGINAL 3D ENGINEERING STAND-IN — '+shot.id:'RELEASE RIGS — '+shot.id;
  renderer.render(scene,camera);
 }
 window.renderFrame=renderFrame;
 window.productionReady=true;
-window.engineStatus={mode:technicalMode?'technical-standin':'final-with-authorized-rigs',renderer:renderer.capabilities.isWebGL2?'WebGL2':'WebGL',frames:planned.frame_count,models:importedModels.map(x=>x.name)};
+window.engineStatus={mode:rigProof?'rigproof-cc0':technicalMode?'technical-standin':'final-with-authorized-rigs',renderer:renderer.capabilities.isWebGL2?'WebGL2':'WebGL',frames:planned.frame_count,models:importedModels.map(x=>x.name),rigging:riggingReport} as typeof window.engineStatus;
 renderFrame(0);
