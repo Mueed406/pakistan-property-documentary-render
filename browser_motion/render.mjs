@@ -49,6 +49,8 @@ try{
  await page.setViewport({width,height,deviceScaleFactor:1});
  const url=new URL(pathToFileURL(file).href);
  url.searchParams.set('width',String(width));url.searchParams.set('height',String(height));
+if(flag('--scene',''))url.searchParams.set('scene',flag('--scene',''));
+if(flag('--caption',''))url.searchParams.set('caption',flag('--caption',''));
  await page.goto(url.href,{waitUntil:'load',timeout:30000});
  await page.waitForFunction('window.__ready && typeof window.renderAt === "function"',{timeout:30000});
  const info=await page.evaluate(()=>window.motionInfo);
