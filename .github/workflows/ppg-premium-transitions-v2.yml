@@ -1,0 +1,129 @@
+name: PPG Premium Transitions v2 — Existing Full Movie
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ppg-premium-transitions-v2.yml'
+      - 'editorial_collage/transitions/premium_transitions.py'
+      - 'editorial_collage/transitions/test_premium_transitions.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ppg-premium-transitions-v2
+  cancel-in-progress: false
+
+jobs:
+  run-and-release:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ppg-editorial-premium-transitions-v2-20261017
+      SOURCE_TAG: ppg-410s-editorial-1080p60-review-20261017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install preapproved original transition runtime
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install 'numpy>=1.26,<3' 'opencv-python-headless>=4.8,<5'
+          python -m py_compile editorial_collage/transitions/premium_transitions.py
+      - name: Run no-cost engine quality and safety tests first
+        run: python -m unittest discover -s editorial_collage/transitions -p 'test_*.py' -v
+      - name: Check completed release, do not recompute an existing deliverable
+        id: reuse
+        run: |
+          if gh release view "$TAG" --repo "${{ github.repository }}" --json assets --jq '[.assets[].name] | index("PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4") != null' 2>/dev/null | grep -qx true; then
+            echo "already_exists=true" >> "$GITHUB_OUTPUT"
+            echo "REUSE: Existing reviewed version is already in GitHub Releases. Skipping duplicate render."
+          else
+            echo "already_exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Download original verified 410-second release, not older demo
+        if: steps.reuse.outputs.already_exists != 'true'
+        run: |
+          mkdir -p input
+          gh release download "$SOURCE_TAG" --repo "${{ github.repository }}" \
+            --pattern 'PPG_Editorial_Documentary_FULL_410s_1080p60.mp4' \
+            --pattern 'MASTER_TECHNICAL_REPORT.json' --dir input
+          test -s input/PPG_Editorial_Documentary_FULL_410s_1080p60.mp4
+          test -s input/MASTER_TECHNICAL_REPORT.json
+      - name: Create narration-anchored premium transition map from verified report
+        if: steps.reuse.outputs.already_exists != 'true'
+        run: |
+          python editorial_collage/transitions/premium_transitions.py \
+            plan-from-report --report input/MASTER_TECHNICAL_REPORT.json \
+            --out input/premium_transition_plan.json --max-events 20
+          python - <<'PY'
+          import json
+          p=json.load(open('input/premium_transition_plan.json'))['transitions']
+          assert 12<=len(p)<=20,len(p)
+          print('STORY-ANCHORED PREMIUM TRANSITIONS',len(p))
+          PY
+      - name: Apply original licensed-free physical-editorial transitions to EXISTING movie
+        if: steps.reuse.outputs.already_exists != 'true'
+        timeout-minutes: 65
+        run: |
+          mkdir -p rendered
+          python -u editorial_collage/transitions/premium_transitions.py apply \
+            --input input/PPG_Editorial_Documentary_FULL_410s_1080p60.mp4 \
+            --plan input/premium_transition_plan.json \
+            --output rendered/PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4 \
+            --crf 18 --encoder-preset veryfast
+      - name: Validate actual full-length H264/AAC movie, 60fps, all frame counts
+        if: steps.reuse.outputs.already_exists != 'true'
+        run: |
+          python - <<'PY'
+          import json,subprocess,pathlib
+          f=pathlib.Path('rendered/PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4')
+          assert f.stat().st_size>60_000_000
+          p=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(f)]))
+          v=next(s for s in p['streams'] if s['codec_type']=='video')
+          a=next(s for s in p['streams'] if s['codec_type']=='audio')
+          sec=float(p['format']['duration'])
+          assert 409.5<sec<411,sec
+          assert (v['width'],v['height'])==(1920,1080)
+          assert v['avg_frame_rate']=='60/1'
+          assert v['codec_name']=='h264' and a['codec_name']=='aac'
+          assert int(v['nb_frames'])==24624
+          report=json.load(open(f.with_suffix('.transition_report.json')))
+          assert len(report['motion_transitions'])>=12
+          print('PREMIUM V2 FULL MOVIE VALIDATED',sec,len(report['motion_transitions']),'transitions',f.stat().st_size)
+          PY
+      - name: Produce short YouTube-friendly playable QC sample without touching full master
+        if: steps.reuse.outputs.already_exists != 'true'
+        run: |
+          FIRST=$(python - <<'PY'
+          import json
+          p=json.load(open('input/premium_transition_plan.json'))['transitions']
+          print(max(0,round(p[0]['frame']/60)-4))
+          PY
+          )
+          ffmpeg -hide_banner -loglevel error -y -ss "$FIRST" \
+            -i rendered/PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4 \
+            -t 18 -vf scale=1280:720:flags=lanczos -r 60 \
+            -c:v libx264 -preset faster -crf 20 -c:a aac -b:a 160k \
+            -movflags +faststart rendered/PPG_Premium_Transitions_18s_720p60_Sample.mp4
+      - name: Publish direct MP4 GitHub prerelease (versioned, original protected)
+        if: steps.reuse.outputs.already_exists != 'true'
+        run: |
+          gh release create "$TAG" --target "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --repo "${{ github.repository }}" \
+            --title 'PPG Full 410s Premium Editorial Transitions v2 — 1080p60 REVIEW' \
+            --prerelease --notes 'Original PPG 6m50 master preserved. Version 2 adds 12-20 cue-aligned handcrafted editorial transitions: paper tear, ink print, newspaper slide, film splice and photo match. Original continuous Urdu voice remains unchanged. All source imagery is illustrative, not court evidence. Creative approval and final source licenses required before YouTube publication.'
+          gh release upload "$TAG" \
+            rendered/PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4 \
+            rendered/PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.transition_report.json \
+            rendered/PPG_Premium_Transitions_18s_720p60_Sample.mp4 \
+            input/premium_transition_plan.json --repo "${{ github.repository }}"
+      - name: Report safe direct-link availability
+        run: |
+          gh release view "$TAG" --repo "${{ github.repository }}" \
+            --json url,assets --jq '{url: .url, artifacts: [.assets[].name]}'
