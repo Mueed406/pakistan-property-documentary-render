@@ -35,7 +35,7 @@ jobs:
         with:
           name: PPG-FullMotion-Build-Diagnostics
           run-id: "38995893640"
-          github-token: __TOKEN__
+          github-token: ${{ github.token }}
           path: recovery
       - name: Install FFmpeg encoder
         shell: pwsh
