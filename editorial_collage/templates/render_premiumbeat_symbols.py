@@ -52,6 +52,7 @@ def main():
   if t<.25 or t+length>=duration-.25:raise ValueError('Invalid event time')
   if not .5<=length<=3.0 or not .07<=scale<=.60:raise ValueError('Unsafe motion dimensions')
   if e['color'] not in COLORS:raise ValueError('Invalid palette')
+  if not .2<=float(e.get('opacity',.55))<=.9:raise ValueError('Unsafe opacity')
   if not 0<=float(e['x'])<=.92 or not 0<=float(e['y'])<=.76:raise ValueError('Unsafe location')
   if float(e['y'])+scale>0.86:raise ValueError('Overlay would obscure subtitles')
  with tempfile.TemporaryDirectory(prefix='template-private-') as temp:
@@ -85,12 +86,12 @@ def main():
    # use a restrained dark-colour key as the original pack advertises pre-keyed animations.
    matte='' if source_info[name]['native_alpha'] else 'colorkey=0x000000:0.13:0.08,'
    overlay_in=f'[{index}:v]fps=60,format=rgba,{matte}scale={w}:-2:flags=lanczos,format=rgba,'
-   overlay_in+=f'lutrgb=r={red}:g={green}:b={blue},colorchannelmixer=aa=0.80,'
+   overlay_in+=f'lutrgb=r={red}:g={green}:b={blue},colorchannelmixer=aa={float(event.get("opacity",.55)):.2f},'
    overlay_in+=f'fade=t=in:st=0:d=0.12:alpha=1,fade=t=out:st={length-.18:.3f}:d=0.18:alpha=1,'
    overlay_in+=f'trim=duration={length:.4f},setpts=PTS-STARTPTS+{t:.4f}/TB[o{i}]'
    filters.append(overlay_in)
    filters.append(f'[v{i}][o{i}]overlay={x}:{y}:eof_action=pass:repeatlast=0:format=auto:enable=\'between(t,{t:.4f},{t+length:.4f})\'[v{i+1}]')
-   desc.append({'file':name,'at':t,'duration':length,'x':x,'y':y,'color':event['color'],'size_px':w})
+   desc.append({'file':name,'at':t,'duration':length,'x':x,'y':y,'color':event['color'],'size_px':w,'opacity':float(event.get('opacity',.55))})
   outfile=pathlib.Path(a.output).resolve();outfile.parent.mkdir(parents=True,exist_ok=True)
   command=(['ffmpeg','-hide_banner','-loglevel','error','-y']+input_args+
       ['-filter_complex',';'.join(filters),'-map',f'[v{len(events)}]','-map','0:a:0','-c:v','libx264',
