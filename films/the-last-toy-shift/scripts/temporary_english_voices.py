@@ -99,8 +99,11 @@ def main():
   if actual<=.05:raise RuntimeError("Empty spoken line "+line)
   # Speech aligned to slot without pitch shifting.
   ratio=actual/(duration-.18)
-  if not .5<=ratio<=2:
-   raise RuntimeError(f"Voice cue {j} {role} requires excessive time stretch {ratio}")
+  # Short lines are intentionally followed by silence. NEVER slow speech to
+  # fill the whole dramatic hold; that creates unnatural robotic performances.
+  if ratio<.87: ratio=1.0
+  if ratio>1.7:
+   raise RuntimeError(f"Voice cue {j} {role} exceeds available slot: {ratio}")
   filters=("highpass=f=250,lowpass=f=3200," if role=="tape" else "")+f"atempo={ratio:.5f}"
   run(["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(raw),
        "-af",filters,"-ar",str(SR),"-ac","1",str(normalized)])
