@@ -62,6 +62,11 @@ def main():
  f.add_argument("--srt",required=True,help="Time-aligned real Urdu subtitle file")
  f.add_argument("--out",default="renders/Pakistan_Property_Full_Browser_Motion_Review.mp4")
  f.add_argument("--motion-dir",default="motion-output")
+ pmp=sub.add_parser("render-premium-pearl",help="Composite 24 light pearl motion sequences over blurred stock footage")
+ pmp.add_argument("--base",required=True)
+ pmp.add_argument("--srt",required=True)
+ pmp.add_argument("--out",default="renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4")
+ pmp.add_argument("--motion-dir",default="premium_motion")
  o=sub.add_parser("export-otio",help="Export editable timeline for external video editors")
  o.add_argument("--decisions",required=True);o.add_argument("--out",required=True)
  r=sub.add_parser("render-stock",help="Render real documentary only with approved audio and matching subtitles")
@@ -103,6 +108,23 @@ def main():
           "--out",path,"--scene",idx,"--width",1920,"--height",1080,"--fps",25,"--seconds",7.5])
    run([sys.executable,ROOT/"browser_motion"/"full_documentary_assemble.py",
        "--base",a.base,"--srt",a.srt,"--motion-dir",motiondir,"--out",a.out])
+  if a.action=="render-premium-pearl":
+   if not Path(a.base).exists() or not Path(a.srt).exists():
+    raise FileNotFoundError("Need the full 410-second documentary and its synchronized SRT")
+   node=shutil.which("node")
+   if not node:raise RuntimeError("Node.js not found")
+   folder=ROOT/a.motion_dir
+   folder.mkdir(parents=True,exist_ok=True)
+   for i in range(24):
+    mp4=folder/("premium_%02d.mp4"%i)
+    if mp4.exists() and mp4.stat().st_size>100000:continue
+    run([node,ROOT/"browser_motion"/"render.mjs",
+        ROOT/"browser_motion"/"premium_pearl_motion.html",
+        "--scene",str(i),"--out",mp4,"--width","1920","--height","1080",
+        "--fps","25","--seconds","6","--pixel-format","yuv444p"])
+   run([sys.executable,ROOT/"browser_motion"/"premium_full_assemble.py",
+        "--base",a.base,"--srt",a.srt,"--motion-dir",folder,
+        "--out",a.out,"--cache",ROOT/"premium_edited_segments"])
   if a.action=="export-otio":
    run([sys.executable,ROOT/"editorial"/"export_otio.py","--decisions",a.decisions,"--out",a.out])
   if a.action=="render-stock":
