@@ -1,0 +1,40 @@
+name: Validate third-party AI motion skill installation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/test-motion-skill-install.yml
+      - windows/Install-MotionSkills.ps1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  skill_install_test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Record skill source provenance
+        run: |
+          git ls-remote https://github.com/JakeB-5/motion-graphic-skill.git HEAD
+          git ls-remote https://github.com/haidrrrry/claude-remotion-skill.git HEAD
+          git ls-remote https://github.com/abhimahamkali/claude-motion-skill.git HEAD
+      - name: Install MIT motion-graphic skill into ephemeral Claude Code environment
+        run: npx --yes skills add JakeB-5/motion-graphic-skill --skill motion-graphic -a claude-code -y --copy
+      - name: Install MIT Remotion skill into ephemeral Claude Code environment
+        run: npx --yes skills add haidrrrry/claude-remotion-skill --skill remotion-motion-graphics -a claude-code -y --copy
+      - name: Confirm actual SKILL.md files installed
+        run: |
+          find .claude -name SKILL.md -print
+          test -s .claude/skills/motion-graphic/SKILL.md
+          test -s .claude/skills/remotion-motion-graphics/SKILL.md
+      - name: License and installation audit
+        run: |
+          echo 'Installed source remains temporary on the runner. No copied third-party skills committed.'
+          echo '/motion by abhimahamkali is optional and must be installed separately from upstream.'
