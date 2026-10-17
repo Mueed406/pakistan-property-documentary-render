@@ -1,0 +1,39 @@
+name: Check advanced Windows motion skills installer syntax
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - windows/Install-MotionSkills.ps1
+      - .github/workflows/check-motion-windows-installer.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  powershell_syntax_check:
+    runs-on: windows-2025
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+      - name: Parse PowerShell installer without actually installing anything
+        shell: pwsh
+        run: |
+          $tokens=$null
+          $errors=$null
+          $path=(Resolve-Path .\windows\Install-MotionSkills.ps1).Path
+          [System.Management.Automation.Language.Parser]::ParseFile($path,[ref]$tokens,[ref]$errors) | Out-Null
+          if($errors.Count -gt 0) {
+            foreach($e in $errors){Write-Error $e.Message}
+            throw "PowerShell script has parse errors"
+          }
+          Write-Host 'PASS: Advanced installer has valid PowerShell syntax'
+      - name: Confirm advanced mode and licensed motion sources are present
+        shell: pwsh
+        run: |
+          $src=Get-Content -Raw windows/Install-MotionSkills.ps1
+          foreach($name in @('motion-art-direction','shot-composition','beat-sync-editing','hyperframes-animation','hyperframes-cli','faceless-explainer')){
+            if(-not $src.Contains($name)){throw "Missing $name"}
+          }
+          Write-Host 'PASS: all six advanced skills present in Windows installer'
