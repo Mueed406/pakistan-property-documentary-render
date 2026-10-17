@@ -19,6 +19,7 @@ declare global {
 
 const displayMode=new URLSearchParams(location.search).get('mode') || 'technical';
 const rigProof=displayMode==='rigproof';
+const threadjawProof=displayMode==='threadjaw';
 const technicalMode=displayMode!=='final';
 const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,preserveDrawingBuffer:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(1);
@@ -85,7 +86,7 @@ function texture(seed:number,base:[number,number,number]){
 }
 const floorMat=new THREE.MeshStandardMaterial({map:texture(11,[58,64,65]),metalness:.24,roughness:.91});
 const wallMat=new THREE.MeshStandardMaterial({map:texture(27,[79,89,90]),metalness:.15,roughness:.94});
-if(rigProof){
+if(rigProof || threadjawProof){
  // Genuine CC0 Poly Haven three-map surface test; no source package is bundled in the repo.
  // API metadata, MD5 and SHA256 are checked by scripts/acquire-cc0-pbr.mjs.
  const imageLoader=new THREE.TextureLoader();
@@ -292,7 +293,13 @@ async function loadReleaseRig(url:string,position:THREE.Vector3,desiredClip='Run
 
 const planned=await fetch('/scene_manifest.json',{cache:'no-cache'}).then(r=>{if(!r.ok)throw new Error('Manifest missing. Run npm run sync.');return r.json() as Promise<Plan>});
 if(planned.frame_count!==5400||planned.shots.length!==11)throw new Error('Unvalidated manifest');
-if(rigProof){
+if(threadjawProof){
+ // Fresh ORIGINAL Blender-authored 3D furry toy stalker, with genuinely weighted
+ // armature, face geometry, distinct animation clips and verified source manifest.
+ const monster=await loadReleaseRig('/assets/original_threadjaw_stalker.glb',vec(0,0,-27),'Running');
+ creature.rig.visible=false;
+ monster.name='Threadjaw — original fan-film character';
+} else if(rigProof){
  // Independently LICENSED CC0 engineering actor to test true skinning/AnimationMixer.
  // It is deliberately NOT a Poppy character and can NEVER satisfy the final-character gate.
  const model=await loadReleaseRig('/assets/cc0_robot_expressive.glb',vec(0,0,-27),'Running');
@@ -400,10 +407,10 @@ function renderFrame(frame:number){
  // End slate is deliberate black to preserve a separate 5-second fan disclaimer.
  if(index===10){scene.background=new THREE.Color(0x000000);root.visible=false;dust.visible=false;}
  else {scene.background=new THREE.Color(0x0b1015);root.visible=true;dust.visible=true;}
- state.textContent=rigProof?'CC0 SKINNED ACTOR DIAGNOSTIC — NOT THE FINAL FILM':technicalMode?'ORIGINAL 3D ENGINEERING STAND-IN — '+shot.id:'RELEASE RIGS — '+shot.id;
+ state.textContent=threadjawProof?'ORIGINAL THREADJAW SKELETAL MODEL — ART QUALITY UNDER REVIEW':rigProof?'CC0 SKINNED ACTOR DIAGNOSTIC — NOT THE FINAL FILM':technicalMode?'ORIGINAL 3D ENGINEERING STAND-IN — '+shot.id:'RELEASE RIGS — '+shot.id;
  renderer.render(scene,camera);
 }
 window.renderFrame=renderFrame;
 window.productionReady=true;
-window.engineStatus={mode:rigProof?'rigproof-cc0':technicalMode?'technical-standin':'final-with-authorized-rigs',renderer:renderer.capabilities.isWebGL2?'WebGL2':'WebGL',frames:planned.frame_count,models:importedModels.map(x=>x.name),rigging:riggingReport} as typeof window.engineStatus;
+window.engineStatus={mode:threadjawProof?'threadjaw-original':rigProof?'rigproof-cc0':technicalMode?'technical-standin':'final-with-authorized-rigs',renderer:renderer.capabilities.isWebGL2?'WebGL2':'WebGL',frames:planned.frame_count,models:importedModels.map(x=>x.name),rigging:riggingReport} as typeof window.engineStatus;
 renderFrame(0);

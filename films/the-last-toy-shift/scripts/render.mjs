@@ -14,12 +14,14 @@ const args=new Map(process.argv.slice(2).filter(s=>s.startsWith('--')).map(s=>{
  const [k,...v]=s.slice(2).split('=');return [k,v.length?v.join('='):true];
 }));
 const mode=String(args.get('mode')||'technical');
-if(!['technical','rigproof','final'].includes(mode))throw new Error('Invalid mode: '+mode);
+if(!['technical','rigproof','threadjaw','final'].includes(mode))throw new Error('Invalid mode: '+mode);
 const final=mode==='final';
 const rigProof=mode==='rigproof';
+const threadjawProof=mode==='threadjaw';
 if(final)assertFinalRights();
 if(!final && args.has('all'))throw new Error('Diagnostic actors are NOT a final film. Use frame-scoped --start and --end only.');
 if(rigProof&&!existsSync('public/assets/cc0_robot_expressive.glb'))throw new Error('CC0 rig missing: run node scripts/acquire-cc0-rig.mjs');
+if(threadjawProof&&!existsSync('public/assets/original_threadjaw_stalker.glb'))throw new Error('Original Blender rig missing: run blender --background --python scripts/blender_make_threadjaw.py');
 const width=Number(args.get('width')||1080),height=Number(args.get('height')||1920);
 if(final && (width!==1080||height!==1920))throw new Error('Final output must be native 1080×1920');
 if(!Number.isInteger(width)||!Number.isInteger(height)||width<270||height<480)throw new Error('Invalid capture size');
@@ -27,13 +29,14 @@ const timeline=JSON.parse(readFileSync('../../templates/fan-animation/poppy_90s_
 const proofStart=1800,proofEnd=2760; // 30s–46s; stalker reveal + moving articulated chase
 const sampleStart=Number(args.get('start')??proofStart),sampleEnd=Number(args.get('end')??proofEnd);
 const shots=args.has('all')?timeline.shots.map(s=>({name:s.id,start:s.start_frame,end:s.end_frame_exclusive})):
- [{name:(rigProof?'RIGPROOF_CC0_':'TECHNICAL_')+(sampleEnd-sampleStart)+'FRAMES_'+sampleStart+'_'+sampleEnd+'_NOT_FINAL',start:sampleStart,end:sampleEnd}];
+ [{name:(threadjawProof?'THREADJAW_ORIGINAL_':rigProof?'RIGPROOF_CC0_':'TECHNICAL_')+(sampleEnd-sampleStart)+'FRAMES_'+sampleStart+'_'+sampleEnd+'_NOT_FINAL',start:sampleStart,end:sampleEnd}];
 for(const s of shots)if(s.start<0||s.end>5400||s.end<=s.start||!Number.isInteger(s.start)||!Number.isInteger(s.end))throw new Error('Invalid frame selection');
 mkdirSync('output',{recursive:true});
 const sourceHash=createHash('sha256');
 for(const path of ['src/main.ts','../../templates/fan-animation/poppy_90s_scene_manifest.json','RIGHTS_GATE.json'])sourceHash.update(readFileSync(path));
 sourceHash.update(JSON.stringify({width,height,mode}));
 if(rigProof)sourceHash.update(readFileSync('public/assets/cc0_robot_expressive.glb'));
+if(threadjawProof)sourceHash.update(readFileSync('public/assets/original_threadjaw_stalker.glb'));
 const fingerprint=sourceHash.digest('hex').slice(0,16);
 const server=spawn('npm',['run','dev'],{stdio:'ignore'});
 async function waitForServer(){
@@ -54,7 +57,7 @@ try{
  await page.waitForFunction(()=>window.productionReady===true,null,{timeout:60000});
  const status=await page.evaluate(()=>window.engineStatus);
  if(final && status.mode!=='final-with-authorized-rigs')throw new Error('No validated imported rigs');
-if(rigProof && (status.mode!=='rigproof-cc0'||!(status.rigging?.skinnedMeshes>0)||!status.rigging?.clips.includes('Running')))
+if((rigProof||threadjawProof) && (status.mode!==(rigProof?'rigproof-cc0':'threadjaw-original')||!(status.rigging?.skinnedMeshes>0)||!status.rigging?.clips.includes('Running')))
  throw new Error('Skinned 3D rig and Run clip not validated: '+JSON.stringify(status));
  console.log('Render stage: ',status,'resolution',width,height);
  for(const shot of shots){
@@ -81,7 +84,7 @@ if(rigProof && (status.mode!=='rigproof-cc0'||!(status.rigging?.skinnedMeshes>0)
    if(exitCode!==0)throw new Error('FFmpeg exited '+exitCode);
    const {renameSync}=await import('node:fs');renameSync(temp,output);
    writeFileSync(metadata,JSON.stringify({start:shot.start,end:shot.end,frames:shot.end-shot.start,
-    width,height,fps:60,fingerprint,mode:final?'final':rigProof?'rigproof-cc0':'technical-standin',
+    width,height,fps:60,fingerprint,mode:final?'final':threadjawProof?'threadjaw-original':rigProof?'rigproof-cc0':'technical-standin',
     rights_release_authorized:final},null,2)+'\n');
    console.log('ENCODED '+output);
   }catch(e){encoder.stdin.destroy();encoder.kill('SIGKILL');throw e;}
