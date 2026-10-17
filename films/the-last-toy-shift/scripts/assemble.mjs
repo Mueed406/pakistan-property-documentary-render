@@ -11,7 +11,7 @@ for(const s of plan.shots){
  const meta=JSON.parse(readFileSync('output/'+p[0]+'.json','utf8'));
  if(meta.mode!=='final'||meta.start!==s.start_frame||meta.end!==s.end_frame_exclusive||
     meta.width!==1080||meta.height!==1920||meta.fps!==60)throw new Error('Shot metadata invalid: '+s.id);
- paths.push('output/'+p[0]);
+ paths.push(p[0]);
 }
 const audio='public/assets/audio/mix.wav';
 if(!existsSync(audio))throw new Error('Approved voice/music/SFX stereo mix missing');
