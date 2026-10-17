@@ -1,0 +1,31 @@
+name: PPG Editorial — Download Verified CC0 Still Assets
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'editorial_collage/**'
+      - '.github/workflows/editorial-cc0-assets.yml'
+permissions:
+  contents: read
+jobs:
+  collect_verified_cc0:
+    name: Acquire and validate freely licensed editorial photos
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install image signature validator
+        run: python -m pip install 'Pillow>=10,<12'
+      - name: Fetch Wikimedia CC0 source photos and write license evidence
+        run: python -u editorial_collage/fetch_cc0_assets.py --out editorial_collage/cc0_downloads
+      - name: Upload verified asset archive for editorial review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Editorial-CC0-Image-Pack
+          path: editorial_collage/cc0_downloads/
+          retention-days: 7
+          if-no-files-found: warn
