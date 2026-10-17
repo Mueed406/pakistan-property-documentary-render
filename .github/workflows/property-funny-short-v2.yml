@@ -1,4 +1,4 @@
-name: PPG Funny Short V2 — Native 1080p60 and Energetic Urdu
+name: PPG Funny Short V3 — Fixed Motion and Energetic Urdu
 on:
   pull_request:
     paths:
@@ -115,20 +115,23 @@ jobs:
           path: shorts/property-funny-v2
       - name: Compose and verify full variable-length short
         run: python -u shorts/property-funny-v2/assemble.py
+      - name: Audit frame motion and sound — reject >1.2s frozen panels
+        run: python -u shorts/property-funny-v2/qa_motion.py shorts/property-funny-v2/Pakistan_Property_Funny_Short_V2_9x16_1080p60.mp4
       - uses: actions/upload-artifact@v4
         with:
-          name: PPG-Short-V2-1080p60
+          name: PPG-Short-V3-1080p60
           path: |
             shorts/property-funny-v2/Pakistan_Property_Funny_Short_V2_9x16_1080p60.mp4
             shorts/property-funny-v2/technical_report_v2.json
+            shorts/property-funny-v2/motion_quality_report.json
             shorts/property-funny-v2/voice_quality_report.json
             shorts/property-funny-v2/Urdu_Captions.srt
           retention-days: 14
           if-no-files-found: error
       - name: Publish separate V2 REVIEW GitHub release, preserve original V1
         run: |
-          TAG=ppg-funny-property-short-v2-bugfix-20261017
+          TAG=ppg-funny-property-short-v3-motion-qc-20261017
           if ! gh release view "$TAG" >/dev/null 2>&1; then
-            gh release create "$TAG" --target "${{ github.sha }}" --title "Property Comedy Short V2 — Animated Repair / Urdu Voice Review" --prerelease --notes "Scene transitions now composite both outgoing and incoming art. Speech waveform drives lip movement. New role-specific Urdu neural voice is for human creative review. Original V1 is preserved."
+            gh release create "$TAG" --target "${{ github.sha }}" --title "Property Comedy Short V3 — Motion Freeze Repair and Enhanced Urdu Review" --prerelease --notes "Scene transitions now composite both outgoing and incoming art. Speech waveform drives lip movement. New role-specific Urdu neural voice is for human creative review. Original V1 and V2 are preserved; editorial voice acting still needs listening approval."
           fi
-          gh release upload "$TAG" shorts/property-funny-v2/Pakistan_Property_Funny_Short_V2_9x16_1080p60.mp4 shorts/property-funny-v2/technical_report_v2.json shorts/property-funny-v2/voice_quality_report.json --clobber
+          gh release upload "$TAG" shorts/property-funny-v2/Pakistan_Property_Funny_Short_V2_9x16_1080p60.mp4 shorts/property-funny-v2/technical_report_v2.json shorts/property-funny-v2/motion_quality_report.json shorts/property-funny-v2/voice_quality_report.json --clobber
