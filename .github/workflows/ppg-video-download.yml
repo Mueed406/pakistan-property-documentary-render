@@ -47,7 +47,7 @@ jobs:
         run: |
           mkdir -p video_delivery/source/renders video_delivery/source/baseline video_delivery/assets/cc0_downloads
           cp recovered/renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4 video_delivery/source/renders/
-          cp recovered/urdu_timed.srt video_delivery/source/baseline/
+          cp recovered/baseline/urdu_timed.srt video_delivery/source/baseline/
           find cc0photos -type f | head -20
           find cc0photos -name '*.jpg' -exec cp '{}' video_delivery/assets/cc0_downloads/ \;
           for f in islamabad_panorama_cc0.jpg construction_crane_cc0.jpg crane_workers_cc0.jpg; do test -s "video_delivery/assets/cc0_downloads/$f"; done
