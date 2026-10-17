@@ -1,0 +1,134 @@
+name: PPG Funny Short V2 — Native 1080p60 and Energetic Urdu
+on:
+  pull_request:
+    paths:
+      - 'shorts/property-funny-v2/**'
+      - '.github/workflows/property-funny-short-v2.yml'
+  workflow_dispatch:
+    inputs:
+      voice_engine:
+        type: choice
+        options: [edge, elevenlabs]
+        default: edge
+      allow_paid_tts:
+        type: choice
+        options: ['false', 'true']
+        default: 'false'
+permissions:
+  contents: write
+  actions: read
+jobs:
+  voice:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      ENGINE: ${{ github.event_name == 'workflow_dispatch' && inputs.voice_engine || 'edge' }}
+      ALLOW_PAID_TTS: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_paid_tts || 'false' }}
+      ELEVENLABS_API_KEY: ${{ secrets.ELEVENLABS_API_KEY }}
+      ELEVENLABS_VOICE_ID: ${{ secrets.ELEVENLABS_VOICE_ID }}
+      ELEVENLABS_NARRATOR_VOICE_ID: ${{ secrets.ELEVENLABS_NARRATOR_VOICE_ID }}
+      ELEVENLABS_DEALER_VOICE_ID: ${{ secrets.ELEVENLABS_DEALER_VOICE_ID }}
+      ELEVENLABS_BUYER_VOICE_ID: ${{ secrets.ELEVENLABS_BUYER_VOICE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+          python -m pip install "numpy>=1.26,<3" "scipy>=1.12,<2" "edge-tts>=7,<9" "requests>=2.31,<3"
+      - name: Generate new Urdu voice, synchronized cues and audio envelope
+        run: |
+          if [ "$ENGINE" = "elevenlabs" ] && [ "$ALLOW_PAID_TTS" != "true" ]; then exit 2; fi
+          python -u shorts/property-funny-v2/voice.py --engine "$ENGINE"
+      - name: Verify new audio, never silently reuse Piper
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          r=Path('shorts/property-funny-v2')
+          d=json.loads((r/'voice_quality_report.json').read_text())
+          assert 44<=d['total_seconds']<=58 and not d['original_piper_audio_reused']
+          assert (r/'soundtrack.wav').stat().st_size>100000
+          assert (r/'mouth_envelope.json').is_file()
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Short-V2-Voice
+          path: |
+            shorts/property-funny-v2/narration.wav
+            shorts/property-funny-v2/soundtrack.wav
+            shorts/property-funny-v2/timeline.json
+            shorts/property-funny-v2/mouth_envelope.json
+            shorts/property-funny-v2/Urdu_Captions.srt
+            shorts/property-funny-v2/voice_quality_report.json
+          retention-days: 14
+          if-no-files-found: error
+  video:
+    needs: voice
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update -qq && sudo apt-get install -y ffmpeg chromium fonts-inter fonts-noto-core fonts-noto-extra
+          python -m pip install "playwright>=1.52,<2"
+      - uses: actions/download-artifact@v4
+        with:
+          name: PPG-Short-V2-Voice
+          path: shorts/property-funny-v2
+      - name: Render genuinely animated 60 FPS cartoon frames
+        run: python -u shorts/property-funny-v2/render.py --part ${{ matrix.part }} --scale 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Short-V2-Motion-${{ matrix.part }}
+          path: shorts/property-funny-v2/part_${{ matrix.part }}.mp4
+          retention-days: 14
+          if-no-files-found: warn
+  release:
+    needs: video
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+      - uses: actions/download-artifact@v4
+        with:
+          name: PPG-Short-V2-Voice
+          path: shorts/property-funny-v2
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: PPG-Short-V2-Motion-*
+          merge-multiple: true
+          path: shorts/property-funny-v2
+      - name: Compose and verify full variable-length short
+        run: python -u shorts/property-funny-v2/assemble.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Short-V2-1080p60
+          path: |
+            shorts/property-funny-v2/Pakistan_Property_Funny_Short_V2_9x16_1080p60.mp4
+            shorts/property-funny-v2/technical_report_v2.json
+            shorts/property-funny-v2/voice_quality_report.json
+            shorts/property-funny-v2/Urdu_Captions.srt
+          retention-days: 14
+          if-no-files-found: error
+      - name: Publish separate V2 REVIEW GitHub release, preserve original V1
+        run: |
+          TAG=ppg-funny-property-short-v2-bugfix-20261017
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "${{ github.sha }}" --title "Property Comedy Short V2 — Animated Repair / Urdu Voice Review" --prerelease --notes "Scene transitions now composite both outgoing and incoming art. Speech waveform drives lip movement. New role-specific Urdu neural voice is for human creative review. Original V1 is preserved."
+          fi
+          gh release upload "$TAG" shorts/property-funny-v2/Pakistan_Property_Funny_Short_V2_9x16_1080p60.mp4 shorts/property-funny-v2/technical_report_v2.json shorts/property-funny-v2/voice_quality_report.json --clobber
