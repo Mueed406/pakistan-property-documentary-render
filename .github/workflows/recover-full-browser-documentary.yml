@@ -1,0 +1,77 @@
+name: Recover completed full documentary
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/recover-full-browser-documentary.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  finalize:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    env:
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install FFmpeg and Pillow
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install 'Pillow>=10,<13'
+      - name: Restore the full 410-second source documentary
+        uses: actions/download-artifact@v4
+        with:
+          name: pakistan-property-urdu-stock-documentary
+          run-id: 38962816235
+          github-token: ${{ github.token }}
+          path: baseline
+      - name: Recover eight already rendered chapters
+        uses: actions/download-artifact@v4
+        with:
+          name: PPG-FullMotion-Build-Diagnostics
+          run-id: 38995893640
+          github-token: ${{ github.token }}
+          path: recovery
+      - name: Find and validate the eight finished 1080p animations
+        run: |
+          mkdir -p motion-output
+          python - <<'PY'
+          from pathlib import Path
+          import shutil,subprocess,json
+          files=list(Path('recovery').rglob('scene_*.mp4'))
+          print('Found',len(files),'animation files')
+          for i in range(8):
+              found=[x for x in files if x.name==f'scene_{i:02d}.mp4']
+              assert len(found)==1,(i,found)
+              dest=Path('motion-output')/found[0].name
+              shutil.copy2(found[0],dest)
+              probe=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-of','json',str(dest)]))
+              v=next(x for x in probe['streams'] if x['codec_type']=='video')
+              assert (v['width'],v['height'])==(1920,1080)
+          PY
+      - name: Assemble existing clips into complete 6m50 video with original audio
+        run: |
+          python -u browser_motion/full_documentary_assemble.py --base baseline/renders/Pakistan_Property_Stock_Documentary_FINAL.mp4 --srt baseline/urdu_timed.srt --motion-dir motion-output --out renders/Pakistan_Property_Full_Browser_Motion_Review.mp4 --work full_motion_segments
+      - name: Publish actual complete video
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-FULL-6m50-1080p-FINAL-REVIEW
+          path: |
+            renders/Pakistan_Property_Full_Browser_Motion_Review.mp4
+            renders/*.json
+            baseline/urdu_timed.srt
+          retention-days: 7
+          if-no-files-found: error
+      - name: Create contact sheet and run visual technical checks
+        run: |
+          python editorial/full_film_qc.py --video renders/Pakistan_Property_Full_Browser_Motion_Review.mp4 --srt baseline/urdu_timed.srt --out renders/visual_qc
+      - name: Upload contact sheet
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Cinematic-Visual-QC
+          path: renders/visual_qc/
+          if-no-files-found: ignore
+          retention-days: 7
