@@ -1,0 +1,108 @@
+name: PPG Funny Property Short — 9x16 1080p60
+on:
+  pull_request:
+    paths:
+      - 'shorts/property-funny-v1/**'
+      - '.github/workflows/property-funny-short.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  voice:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install 'piper-tts>=1.2,<2' 'requests>=2.31,<3' 'numpy>=1.26,<3' 'scipy>=1.12,<2'
+      - name: Generate original Urdu voice and music
+        run: python -u shorts/property-funny-v1/voice.py
+      - name: Preserve approved script, audio, voice cue times
+        uses: actions/upload-artifact@v4
+        with:
+          name: property-short-audio
+          path: |
+            shorts/property-funny-v1/narration.wav
+            shorts/property-funny-v1/soundtrack.wav
+            shorts/property-funny-v1/timeline.json
+          if-no-files-found: error
+          retention-days: 10
+  render:
+    needs: voice
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [0, 1, 2]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg chromium fonts-inter fonts-roboto fonts-noto-core fonts-noto-extra
+          python -m pip install 'playwright>=1.52,<2'
+      - uses: actions/download-artifact@v4
+        with:
+          name: property-short-audio
+          path: shorts/property-funny-v1
+      - name: Render 900 independent cartoon frames in native 1080x1920
+        run: |
+          START=$((15 * ${{ matrix.part }}))
+          END=$((START+15))
+          python -u shorts/property-funny-v1/render.py --start "$START" --end "$END" --fps 60 --scale 2 --out shorts/property-funny-v1/part_${{ matrix.part }}.mp4
+      - uses: actions/upload-artifact@v4
+        with:
+          name: property-short-video-${{ matrix.part }}
+          path: shorts/property-funny-v1/part_${{ matrix.part }}.mp4
+          if-no-files-found: error
+          retention-days: 10
+  release:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: render
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: sudo apt-get update -qq && sudo apt-get install -y ffmpeg
+      - uses: actions/download-artifact@v4
+        with:
+          name: property-short-audio
+          path: shorts/property-funny-v1
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: property-short-video-*
+          merge-multiple: true
+          path: shorts/property-funny-v1
+      - name: Assemble, verify every frame, audio, 9:16 geometry
+        run: python -u shorts/property-funny-v1/assemble.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Funny-Short-45s-9x16-1080p60
+          path: |
+            shorts/property-funny-v1/Pakistan_Property_Funny_Short_9x16_1080p60.mp4
+            shorts/property-funny-v1/technical_report.json
+            shorts/property-funny-v1/timeline.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish GitHub downloadable review MP4 (NOT YouTube publication)
+        run: |
+          TAG=ppg-funny-property-short-9x16-20261017
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "${{ github.sha }}" --title "PPG Funny Property Short — 45s 9:16 Review" --prerelease --notes "Original vector-cartoon 1080x1920/60fps video with fictional property-dealer satire, open Piper Urdu voice, and original musical soundtrack. Not YouTube-published. Human artistic/voice review recommended."
+          fi
+          gh release upload "$TAG" shorts/property-funny-v1/Pakistan_Property_Funny_Short_9x16_1080p60.mp4 shorts/property-funny-v1/technical_report.json --clobber
