@@ -32,7 +32,7 @@ if(-not $Install) {
  Write-Host 'Audit only: run with -Install to actually install external skills.'
  Write-Host 'MIT: JakeB-5/motion-graphic-skill'
  Write-Host 'MIT: haidrrrry/claude-remotion-skill'
- Write-Host 'Advanced pack: iart.ai motion art direction, shot composition, beat-sync; HyperFrames CLI, animation, faceless explainer'
+ Write-Host 'Advanced pack: motion art direction, shot composition, beat-sync, premium color-motion, graph/chart-animation, animated-infographic, map-animation, cinematic-camera, HyperFrames'
  Write-Host 'Optional unlicensed upstream: abhimahamkali/claude-motion-skill (install separately at your own discretion)'
  exit 0
 }
@@ -55,6 +55,12 @@ if($Advanced) {
   AddSkill 'heygen-com/hyperframes' 'hyperframes-animation' @('claude-code','codex')
   AddSkill 'heygen-com/hyperframes' 'hyperframes-cli' @('claude-code','codex')
   AddSkill 'heygen-com/hyperframes' 'faceless-explainer' @('claude-code','codex')
+  AddSkill 'iart-ai/motion-design-skills' 'color-motion' @('claude-code','codex')
+  AddSkill 'iart-ai/motion-design-skills' 'animation-principles' @('claude-code','codex')
+  AddSkill 'iart-ai/data-animation-skills' 'chart-animation' @('claude-code','codex')
+  AddSkill 'iart-ai/data-animation-skills' 'animated-infographic' @('claude-code','codex')
+  AddSkill 'iart-ai/map-animation-skills' 'map-animation' @('claude-code','codex')
+  AddSkill 'Liamrjohnston/remotion-motion-graphics-skill' 'cinematic-camera' @('claude-code','codex')
 }
 if($IncludeCommunityMotion) {
  Write-Warning 'The /motion repository did not contain a visible explicit LICENSE file when reviewed. Do NOT redistribute as our own skill; installing upstream only.'
