@@ -54,3 +54,15 @@ Use ppg repo example: 410.4s / 1080p60 / 50 editorial scenes, GitHub release ppg
 
 ## Skill continuation
 For Antigravity/Claude Code, use docs/ANTIGRAVITY_DOCUMENTARY_V4_MASTER_PROMPT.md and docs/DOCUMENTARY_V4_PLAYBOOK.md; do not claim installing this skill itself installs software or gives API access. For ChatGPT, invoke connected app actions only when available. User credentials must be held in authorized GitHub Actions secrets, not in chat. Preserve editable history, sources, and licenses. Return exact facts on what is COMPLETE vs INCOMPLETE.
+
+## Premium transition rules (v5 extension — 17 October 2026)
+
+The default documentary transition library is `editorial_collage/transitions/premium_transitions.py` (original, no external paid dependency). Five presets: `paper-tear`, `ink-print`, `newspaper-slide`, `film-splice`, `photo-match`. Each composites BOTH true preceding/incoming video plates through textured masks at the actual frame-locked cut. The transition is not a separate stock clip, full-screen image generator output or generic wipe pasted over video.
+
+Choose transitions only at meaningful shot/act boundaries—typically a small curated subset, never every cut—and preserve voice/music timing and source duration. At 60 FPS use short 0.3–0.6-second bridges, inspect middle frames and edge artifacts. Final process **uses the existing master MP4**; never spend quota recreating fifty scenes to repair a few transitions.
+
+A proven 15s/60fps motion test and full GitHub Release upgrade workflow are documented in `editorial_collage/transitions/README.md`. The external license-researched Mixkit, ProductionCrate, Motion Array links and export compatibility details are in `editorial_collage/transitions/TEMPLATE_CATALOG.md`.
+
+Third-party free site templates may require actual DaVinci Resolve/Premiere/After Effects and per-item license verification. Do not claim their template project ZIP was downloaded when only an online listing was researched, and never redistribute source archives forbidden by the license. When an external editor template is approved, export licensed transition media to a compatible format before the FFmpeg pipeline imports it.
+
+For skill updates, cache key must include transition-plan JSON, executable source revision and source-video digest; sample-first QA and versioned GitHub Releases protect prior masters.
