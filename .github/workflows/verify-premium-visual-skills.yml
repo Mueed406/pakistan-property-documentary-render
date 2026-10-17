@@ -1,0 +1,40 @@
+name: Verify premium color, graph, map and camera skills
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/verify-premium-visual-skills.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install_premium_skills:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install color palette and proper animation fundamentals
+        run: |
+          npx --yes skills add iart-ai/motion-design-skills --skill color-motion -a claude-code -y --copy
+          npx --yes skills add iart-ai/motion-design-skills --skill animation-principles -a claude-code -y --copy
+      - name: Install chart and infographic storytelling skills
+        run: |
+          npx --yes skills add iart-ai/data-animation-skills --skill chart-animation -a claude-code -y --copy
+          npx --yes skills add iart-ai/data-animation-skills --skill animated-infographic -a claude-code -y --copy
+      - name: Install cartographic and cinematic framing skills
+        run: |
+          npx --yes skills add iart-ai/map-animation-skills --skill map-animation -a claude-code -y --copy
+          npx --yes skills add Liamrjohnston/remotion-motion-graphics-skill --skill cinematic-camera -a claude-code -y --copy
+      - name: Check six actually installed markdown skills
+        run: |
+          for name in color-motion animation-principles chart-animation animated-infographic map-animation cinematic-camera; do
+            test -s ".claude/skills/$name/SKILL.md" || { echo "Missing premium skill $name"; exit 1; }
+            echo "INSTALLED: $name"
+          done
+      - name: License audit
+        run: |
+          echo "All upstream skills installed in temporary GitHub runner, not redistributed."
+          echo "Check any adapted source's MIT license and third-party asset rights before release."
