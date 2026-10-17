@@ -41,11 +41,11 @@ async function waitForServer(){
 let browser;
 try{
  await waitForServer();
- browser=await chromium.launch({headless:true,args:['--enable-webgl','--ignore-gpu-blocklist']});
+ browser=await chromium.launch({headless:true,args:['--enable-webgl','--ignore-gpu-blocklist','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  const page=await browser.newPage({viewport:{width,height},deviceScaleFactor:1});
  page.on('pageerror',error=>console.error('Browser:',error.message));
  await page.goto('http://127.0.0.1:5173/?mode='+(final?'final':'technical')+'&capture=1',{waitUntil:'networkidle'});
- await page.waitForFunction(()=>window.productionReady===true,{timeout:60000});
+ await page.waitForFunction(()=>window.productionReady===true,null,{timeout:60000});
  const status=await page.evaluate(()=>window.engineStatus);
  if(final && status.mode!=='final-with-authorized-rigs')throw new Error('No validated imported rigs');
  console.log('Render stage: ',status,'resolution',width,height);
