@@ -1,0 +1,105 @@
+name: PPG FULL 410s — Real Creator Template Motion v3
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/ppg-template-integrated-v3-full.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: ppg-template-integrated-v3-full
+  cancel-in-progress: false
+jobs:
+  custom-template-full-film:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 110
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_TAG: ppg-editorial-premium-transitions-v2-20261017
+      SOURCE_REPORT_TAG: ppg-410s-editorial-1080p60-review-20261017
+      DEST_TAG: ppg-creator-motion-templates-v3-20261017
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm target isn't already published
+        id: reuse
+        run: |
+          if gh release view "$DEST_TAG" --repo "${{ github.repository }}" --json assets --jq '[.assets[].name] | index("PPG_Editorial_Documentary_CREATOR_MOTION_v3_1080p60.mp4") != null' 2>/dev/null | grep -qx true; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "Reuse existing successfully uploaded output; preserve GitHub minutes."
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Setup dependencies (no Premiere Pro, no paid account)
+        if: steps.reuse.outputs.present != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m py_compile editorial_collage/templates/audit_free_premiumbeat.py editorial_collage/templates/plan_from_report.py editorial_collage/templates/render_premiumbeat_symbols.py
+      - name: Retrieve actual working 410-second film and exact chapter timing
+        if: steps.reuse.outputs.present != 'true'
+        run: |
+          mkdir -p input output
+          gh release download "$SOURCE_TAG" --repo "${{ github.repository }}" --pattern 'PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4' --dir input
+          gh release download "$SOURCE_REPORT_TAG" --repo "${{ github.repository }}" --pattern 'MASTER_TECHNICAL_REPORT.json' --dir input
+          test "$(stat -c%s input/PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4)" -gt 100000000
+      - name: Obtain actual licensed free creator animations without distributing them
+        if: steps.reuse.outputs.present != 'true'
+        run: |
+          curl -L --fail --retry 3 --max-time 150 \
+            'https://pbblogassets.s3.amazonaws.com/uploads/freebies/PB-free-hand-drawn-symbols.zip' \
+            -o /tmp/PB-free-hand-drawn-symbols.zip
+          python editorial_collage/templates/audit_free_premiumbeat.py --archive /tmp/PB-free-hand-drawn-symbols.zip --out input/PREMIUMBEAT_SOURCE_AUDIT.json
+      - name: Use narration chapter report for motion selection — no guessed placements
+        if: steps.reuse.outputs.present != 'true'
+        run: |
+          python editorial_collage/templates/plan_from_report.py \
+            --report input/MASTER_TECHNICAL_REPORT.json \
+            --output input/FINAL_CREATOR_TEMPLATE_MOTION_CUES.json
+      - name: Customize and composite actual animated creator templates into full film
+        if: steps.reuse.outputs.present != 'true'
+        timeout-minutes: 85
+        run: |
+          python -u editorial_collage/templates/render_premiumbeat_symbols.py \
+            --input input/PPG_Editorial_Documentary_PREMIUM_TRANSITIONS_v2_1080p60.mp4 \
+            --pack /tmp/PB-free-hand-drawn-symbols.zip \
+            --plan input/FINAL_CREATOR_TEMPLATE_MOTION_CUES.json \
+            --output output/PPG_Editorial_Documentary_CREATOR_MOTION_v3_1080p60.mp4 \
+            --report output/CREATOR_TEMPLATE_VIDEO_QC.json --preset faster --crf 19
+      - name: Strict MP4 engineering QA
+        if: steps.reuse.outputs.present != 'true'
+        run: |
+          python - <<'PY'
+          import json,pathlib,subprocess
+          p=pathlib.Path("output/PPG_Editorial_Documentary_CREATOR_MOTION_v3_1080p60.mp4")
+          assert p.stat().st_size>80000000
+          d=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_streams","-show_format","-of","json",str(p)]))
+          v=next(s for s in d["streams"] if s["codec_type"]=="video")
+          a=next(s for s in d["streams"] if s["codec_type"]=="audio")
+          assert (v["width"],v["height"],v["avg_frame_rate"],v["codec_name"]) == (1920,1080,"60/1","h264")
+          assert a["codec_name"]=="aac"
+          assert 409.5<float(d["format"]["duration"])<411
+          report=json.loads(pathlib.Path("output/CREATOR_TEMPLATE_VIDEO_QC.json").read_text())
+          assert len(report["third_party_motion_events"])>=8
+          assert report["raw_source_assets_published"] is False
+          print("MASTER 410s VALIDATED; REAL LICENSED MOTION EVENTS",len(report["third_party_motion_events"]))
+          PY
+      - name: Produce focused 35-second playback review around reported numerical scenes
+        if: steps.reuse.outputs.present != 'true'
+        run: |
+          ffmpeg -hide_banner -loglevel error -y -ss 34 \
+            -i output/PPG_Editorial_Documentary_CREATOR_MOTION_v3_1080p60.mp4 \
+            -t 35 -vf scale=1280:720:flags=lanczos -r 60 \
+            -c:v libx264 -preset faster -crf 21 -c:a aac -b:a 160k \
+            -movflags +faststart output/PPG_REAL_Templates_35s_720p60_Review.mp4
+      - name: Publish versioned GitHub prerelease for actual final-video review
+        if: steps.reuse.outputs.present != 'true'
+        run: |
+          gh release create "$DEST_TAG" --repo "${{ github.repository }}" --target "${{ github.event.pull_request.head.sha || github.sha }}" \
+            --title "PPG 6m50 — Premium Licensed Motion Graphics v3 / Review" \
+            --prerelease \
+            --notes "Review only. Original 410s and v2 masters preserved. Uses customized original Premiere-independent ProRes 4444 alpha symbol movies from PremiumBeat/Film Bodega free commercial-use pack, plus our separate premium paper transition editor. Raw third-party creator files are NOT redistributed. Source: https://www.premiumbeat.com/blog/free-hand-drawn-animated-shapes/ . Photos illustrate, not evidence of actual suspects. Existing Urdu voice unchanged. Human creative, audio, licensing and accuracy QC still needed prior to YouTube."
+          gh release upload "$DEST_TAG" --repo "${{ github.repository }}" \
+            output/PPG_Editorial_Documentary_CREATOR_MOTION_v3_1080p60.mp4 \
+            output/PPG_REAL_Templates_35s_720p60_Review.mp4 \
+            output/CREATOR_TEMPLATE_VIDEO_QC.json \
+            input/FINAL_CREATOR_TEMPLATE_MOTION_CUES.json
