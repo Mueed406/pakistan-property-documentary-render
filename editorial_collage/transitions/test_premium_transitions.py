@@ -32,5 +32,8 @@ class TransitionTests(unittest.TestCase):
             results=boundaries_from_report(p,max_events=8,min_spacing=14)
             self.assertLessEqual(len(results),8)
             self.assertTrue(all(result['frame']>0 for result in results))
+            planpath=Path(d)/'auto_plan.json'
+            planpath.write_text(json.dumps({'transitions':results}))
+            self.assertEqual(len(load_plan(planpath)),len(results))
 
 if __name__=='__main__':unittest.main()
