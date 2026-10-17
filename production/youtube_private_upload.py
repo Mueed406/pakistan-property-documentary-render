@@ -39,6 +39,8 @@ def main(argv=None):
         raise SystemExit("Manifest needs explicit approval for upload; no publication.")
     if manifest.get("made_for_kids") is None:
         raise SystemExit("Set the real made-for-kids classification before upload.")
+    if manifest.get("contains_synthetic_media") is None:
+        raise SystemExit("Specify whether realistic altered/synthetic content requires YouTube disclosure.")
     title=manifest.get("title","").strip()
     if not 1<=len(title)<=100 or not manifest.get("description","").strip():
         raise SystemExit("A verified title and complete description are required.")
@@ -78,9 +80,11 @@ def main(argv=None):
     body={
         "snippet":{"title":title,"description":manifest["description"],
                    "tags":manifest.get("tags") or [],
-                   "categoryId":"25","defaultLanguage":"ur"},
+                   "categoryId":str(manifest.get("category_id","22")),
+                   "defaultLanguage":manifest.get("language","ur")},
         "status":{"privacyStatus":"private",
-                  "selfDeclaredMadeForKids":bool(manifest["made_for_kids"])}
+                  "selfDeclaredMadeForKids":bool(manifest["made_for_kids"]),
+                  "containsSyntheticMedia":bool(manifest["contains_synthetic_media"])}
     }
     media=MediaFileUpload(str(video),chunksize=16*1024*1024,
                           mimetype="video/mp4",resumable=True)
