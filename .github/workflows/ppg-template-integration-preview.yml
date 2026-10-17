@@ -1,0 +1,61 @@
+name: PPG Template-Integrated Animated Symbols PREVIEW
+on:
+  pull_request:
+    paths:
+      - 'editorial_collage/templates/**'
+      - '.github/workflows/ppg-template-integration-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  actual-template-composite:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install FFmpeg and script requirements
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m py_compile editorial_collage/templates/render_premiumbeat_symbols.py
+      - name: Download PREVIOUS verified 18-second sample from release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p input
+          gh release download ppg-editorial-premium-transitions-v2-20261017 --repo "${{ github.repository }}" --pattern 'PPG_Premium_Transitions_18s_720p60_Sample.mp4' --dir input
+          ffprobe -v error -show_entries format=duration -of default=nk=1:nw=1 input/PPG_Premium_Transitions_18s_720p60_Sample.mp4
+      - name: Fetch original FREE commercial-licensed PremiumBeat/FIlm Bodega MOV sources
+        run: |
+          curl -L --fail --retry 3 --retry-delay 2 --max-time 120 \
+            'https://pbblogassets.s3.amazonaws.com/uploads/freebies/PB-free-hand-drawn-symbols.zip' \
+            -o /tmp/PB-free-hand-drawn-symbols.zip
+          python editorial_collage/templates/audit_free_premiumbeat.py \
+            --archive /tmp/PB-free-hand-drawn-symbols.zip --out input/original_template_audit.json
+      - name: Compose ACTUAL motion templates over 720p60 film with personalized editorial palette
+        run: |
+          mkdir -p rendered
+          python -u editorial_collage/templates/render_premiumbeat_symbols.py \
+            --input input/PPG_Premium_Transitions_18s_720p60_Sample.mp4 \
+            --pack /tmp/PB-free-hand-drawn-symbols.zip \
+            --plan editorial_collage/templates/preview_plan.json \
+            --output rendered/PPG_REAL_Templates_Editorial_Sample_18s_720p60.mp4 \
+            --report rendered/TEMPLATE_INTEGRATION_QC.json --preset veryfast --crf 18
+      - name: Check output is real, matches original exact footage and narration
+        run: |
+          python - <<'PY'
+          import json,pathlib
+          p=json.loads(pathlib.Path('rendered/TEMPLATE_INTEGRATION_QC.json').read_text())
+          assert p['fps']==60 and p['resolution']==[1280,720] and len(p['third_party_motion_events'])==3
+          assert p['raw_source_assets_published'] is False
+          print('3 ACTUAL CREATOR MOV ANIMATIONS COMPOSITED INTO 60FPS SOURCE')
+          PY
+      - name: Publish ONLY derivative MP4 and QC, NEVER restricted stand-alone creator MOV files
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Actual-PremiumBeat-Customized-Template-Motion-18s
+          path: |
+            rendered/PPG_REAL_Templates_Editorial_Sample_18s_720p60.mp4
+            rendered/TEMPLATE_INTEGRATION_QC.json
+          retention-days: 7
+          if-no-files-found: error
