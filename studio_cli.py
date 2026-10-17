@@ -136,4 +136,9 @@ def main():
         "--voice",a.voice,"--subtitles",a.subtitles,"--music",a.music])
  except (OSError,RuntimeError,subprocess.CalledProcessError) as e:
   print("STUDIO ERROR:",e,file=sys.stderr);sys.exit(2)
-if __name__=="__main__":main()
+if __name__=="__main__":
+ # Backwards-compatible v4 conductor: no dependencies or re-render until
+ # the invoked subcommand explicitly requires them.
+ if len(sys.argv)>1 and sys.argv[1] in ("documentary","studio-v4"):
+  sys.exit(subprocess.call([sys.executable,str(ROOT/"production"/"studio_pipeline.py"),*sys.argv[2:]],cwd=str(ROOT)))
+ main()
