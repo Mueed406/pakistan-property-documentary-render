@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ur" dir="rtl"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Pakistan Property Group — Documentary Browser Motion Scene</title>
+<style>
+html,body{margin:0;width:100%;height:100%;background:#080e17;overflow:hidden}
+canvas{display:block;width:100%;height:100%;object-fit:contain}
+</style></head><body>
+<canvas id="shot" aria-label="Conceptual three dimensional comparison of reported housing files and physical land parcels"></canvas>
+<script>
+(()=>{
+'use strict';
+const c=document.querySelector('canvas'),g=c.getContext('2d',{alpha:false});
+const qs=new URLSearchParams(location.search);
+const W=Math.max(320,Number(qs.get('width'))||1920),H=Math.max(180,Number(qs.get('height'))||1080);
+c.width=W;c.height=H;
+const ease=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const smooth=(time,start,duration)=>ease((time-start)/duration);
+const ink='#0a111b',gold='#ecc8a1',aqua='#59dad6';
+const project=(x,y,z=0,shift=0)=>({x:1282+(x-y)*32+shift,y:551+(x+y)*13-z*44});
+function poly(points,fill,stroke,width=1.4){g.beginPath();g.moveTo(points[0].x,points[0].y);for(let k=1;k<points.length;k++)g.lineTo(points[k].x,points[k].y);g.closePath();g.fillStyle=fill;g.fill();if(stroke){g.strokeStyle=stroke;g.lineWidth=width;g.stroke();}}
+function panel(x,y,w,h,opacity){g.globalAlpha=opacity;g.fillStyle='#0e1a25';g.fillRect(x,y,w,h);g.strokeStyle='#547179';g.lineWidth=2;g.strokeRect(x,y,w,h);g.globalAlpha=1;}
+function para(t,p){const x=p.x,y=p.y,fade=p.fade;const l=23,h=19;const a=project(x,y,0,fade),b=project(x+l,y,0,fade),d=project(x,y+h,0,fade),cc=project(x+l,y+h,0,fade);
+  const hi=(p.selected?1.15:0.18)*p.lift;
+  const top=[project(x,y,hi,fade),project(x+l,y,hi,fade),project(x+l,y+h,hi,fade),project(x,y+h,hi,fade)];
+  const side=[top[1],top[2],cc,b];
+  poly(side,p.selected?'#1f727e':'#26363d',null);
+  poly([top[2],top[3],d,cc],p.selected?'#27666c':'#162831',null);
+  poly(top,p.selected?'#3aa8ad':'#314650',p.selected?'#90f6ea':'#637781',1.7);
+  if(p.selected){g.shadowColor='#58dfd7';g.shadowBlur=10;g.strokeStyle='rgba(97,244,233,.5)';g.stroke();g.shadowBlur=0;}
+}
+function files(time){
+ const how=smooth(time,2.0,2.0);
+ for(let i=0;i<13;i++){
+  const p=smooth(time,2.0+i*.085,.85),x=440+i*12,y=666-i*16;
+  if(p<.025)continue;
+  g.save();g.translate(x+(1-p)*-110,y+(1-p)*32);g.rotate(-.11);
+  g.globalAlpha=.76*p;g.fillStyle='#cbad8a';g.fillRect(0,0,148,191);
+  g.fillStyle='#27323d';g.fillRect(11,16,121,2);g.fillRect(11,44,76,2);
+  g.globalAlpha=p;g.strokeStyle='#8b7966';g.lineWidth=2;g.strokeRect(0,0,148,191);
+  g.restore();
+ }
+ return how;
+}
+function title(t){
+ const op=smooth(t,.1,.85),slide=(1-op)*37;
+ g.save();g.globalAlpha=op;g.fillStyle='#a9c1c7';g.textAlign='left';g.font='bold 25px Arial,sans-serif';g.fillText('PAKISTAN PROPERTY GROUP  /  EXPLAINED',104,100);
+ g.textAlign='right';g.fillStyle='#fff5e7';g.font='bold 76px "Noto Naskh Arabic","Segoe UI",sans-serif';
+ g.fillText('فائل موجود ہے، زمین کہاں ہے؟',1060+slide,239);
+ g.globalAlpha=smooth(t,1.0,.75);
+ g.font='36px "Noto Naskh Arabic","Segoe UI",sans-serif';g.fillStyle='#cbd8db';
+ g.fillText('ایک فائل، ایک وعدہ — مگر حقیقی پلاٹ؟',1058,309);
+ g.restore();
+}
+function numbers(t){
+ const p=smooth(t,2.6,1.9),dim=smooth(t,2.4,.7);
+ g.save();g.globalAlpha=dim;
+ g.fillStyle='rgba(10,20,29,.54)';g.fillRect(82,382,1036,181);
+ g.fillStyle='#829fa8';g.textAlign='left';g.font='24px Arial,sans-serif';
+ g.fillText('REPORTED FILES',111,425);g.fillText('REPORTED PLOT CAPACITY',570,425);
+ g.fillStyle=gold;g.font='bold 93px Arial,sans-serif';g.fillText(Math.round(42000*p).toLocaleString('en-US'),108,527);
+ g.fillStyle=aqua;g.fillText(Math.round(6000*p).toLocaleString('en-US'),567,527);
+ g.restore();
+}
+function draw(t){
+ const kx=W/1920,ky=H/1080;g.setTransform(kx,0,0,ky,0,0);
+ const bg=g.createLinearGradient(0,0,1920,1080);
+ bg.addColorStop(0,'#090e15');bg.addColorStop(.62,'#172c37');bg.addColorStop(1,'#060d15');
+ g.fillStyle=bg;g.fillRect(0,0,1920,1080);
+ const halo=g.createRadialGradient(1410,490,20,1410,490,740);
+ halo.addColorStop(0,'rgba(45,127,142,.25)');halo.addColorStop(1,'rgba(45,127,142,0)');
+ g.fillStyle=halo;g.fillRect(200,0,1720,1080);
+ g.save();g.globalAlpha=.065;g.strokeStyle='#99dde4';g.lineWidth=1;
+ for(let x=0;x<1920;x+=72){g.beginPath();g.moveTo(x,0);g.lineTo(x,1080);g.stroke();}
+ for(let y=0;y<1080;y+=72){g.beginPath();g.moveTo(0,y);g.lineTo(1920,y);g.stroke();}
+ g.restore();
+ const drift=Math.sin(t*.29)*16;
+ for(let iy=7;iy>=0;iy--){for(let ix=9;ix>=0;ix--){
+  const chosen=(ix+iy*13)%9===0;const fade=smooth(t,.9+(ix+iy)*.045,.54);
+  if(fade<.001)continue;
+  const x=ix*28,y=iy*23;
+  para(t,{x,y,selected:chosen,lift:fade,fade:drift});
+ }}
+ g.save();g.fillStyle='#131c26';g.globalAlpha=.7;g.fillRect(0,873,1920,207);g.restore();
+ title(t);numbers(t);files(t);
+ const footer=smooth(t,3.9,.8);
+ g.globalAlpha=footer;
+ g.textAlign='right';g.font='31px "Noto Naskh Arabic","Segoe UI",sans-serif';
+ g.fillStyle='#edf3f2';g.fillText('تقریباً ۳۶ ہزار کا مبینہ فرق — حتمی عدالتی فیصلہ نہیں',1798,935);
+ g.textAlign='left';g.font='22px Arial,sans-serif';g.fillStyle='#91b0b9';
+ g.fillText('ILLUSTRATIVE VISUALIZATION  •  NOT AN ACTUAL SITE MAP',101,1007);
+ g.globalAlpha=1;
+ g.save();const vig=g.createRadialGradient(960,500,200,960,500,1180);
+ vig.addColorStop(0,'transparent');vig.addColorStop(1,'rgba(0,0,0,.6)');
+ g.fillStyle=vig;g.fillRect(0,0,1920,1080);g.restore();
+}
+window.renderAt=(t)=>draw(Number(t)||0);
+window.motionInfo={width:W,height:H,duration:7.5,fps:25,source:'Original browser canvas animation'};
+document.fonts.ready.then(()=>{draw(0);window.__ready=true;});
+})();
+</script></body></html>

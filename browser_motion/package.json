@@ -1,0 +1,13 @@
+{
+  "name": "ppg-browser-motion",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "preview": "node render.mjs scene.html --out out/browser-motion-preview.mp4 --fps 25 --seconds 7.5",
+    "smoke": "node render.mjs scene.html --out out/browser-motion-smoke.mp4 --width 960 --height 540 --fps 25 --frames 18"
+  },
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}
