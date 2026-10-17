@@ -190,7 +190,7 @@ def apply(source,output,transitions,crf=18,preset='veryfast',max_frames=0,thread
     if fps not in ('60/1','60'):
         raise ValueError('Exact 60fps source required, got '+fps)
     W,H=int(v['width']),int(v['height'])
-    expected=int(round(float(meta['format']['duration'])*FPS))
+    expected=int(v.get('nb_frames') or round(float(v.get('duration') or meta['format']['duration'])*FPS))
     if max_frames:expected=min(expected,int(max_frames))
     cap=cv2.VideoCapture(str(source))
     if not cap.isOpened():raise RuntimeError('Cannot decode original video')
