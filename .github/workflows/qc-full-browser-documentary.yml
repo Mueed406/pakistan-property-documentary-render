@@ -1,0 +1,48 @@
+name: Automatically inspect full documentary with frame contact sheet
+
+on:
+  workflow_run:
+    workflows:
+      - Full 6m50 Documentary — Eight HTML Motion Chapters
+    types:
+      - completed
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  auto_documentary_qc:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install free FFmpeg and image QC dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install "Pillow>=10,<13"
+      - name: Download completed feature film from triggering run
+        uses: actions/download-artifact@v4
+        with:
+          name: PPG-FULL-6m50-HD-BrowserMotion-Review
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: feature
+      - name: Validate ALL 410 seconds of film and make 18-frame contact sheet
+        run: |
+          python editorial/full_film_qc.py \
+            --video feature/renders/Pakistan_Property_Full_Browser_Motion_Review.mp4 \
+            --srt feature/baseline/urdu_timed.srt \
+            --out reviewframes
+      - name: Upload technical quality report and full-story visual contact sheet
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Full-Cinematic-Documentary-ContactSheet-QC
+          path: |
+            reviewframes/full_review_contact_sheet.jpg
+            reviewframes/full_engineering_qc.json
+            reviewframes/review_*.jpg
+          retention-days: 7
+          if-no-files-found: error
