@@ -1,0 +1,54 @@
+name: Last Toy Shift — English Voice Audition (NOT FINAL)
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - '.github/workflows/last-toy-shift-free-english-voice-draft.yml'
+  workflow_dispatch:
+jobs:
+  offline-noncommercial-voice-audition:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install offline Piper TTS and FFmpeg (no paid voice API)
+        run: |
+          python -m pip install -q 'piper-tts>=1.3,<2' 'numpy>=1.26,<3'
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          command -v piper
+      - name: Acquire hashed models and generate English dialogue audition
+        run: |
+          python scripts/temporary_english_voices.py --out output/voices_draft
+          python - <<'PY'
+          import json
+          d=json.load(open('output/voices_draft/VOICE_PROVENANCE.json'))
+          assert len(d['cues'])==6 and len(d['voices'])==3 and d['release_authorized'] is False
+          print("Three license-checked roles and six cues, 90 seconds; NOT artistically approved")
+          PY
+      - name: Encode listening-only audio with 90s synthetic soundscape
+        run: |
+          python -m pip install -q numpy
+          python scripts/soundscape_90s.py --out output/soundscape
+          ffmpeg -hide_banner -loglevel error -y \
+            -i output/soundscape/TEMP_90S_MIX_NO_VOICES_NOT_FINAL.wav \
+            -i output/voices_draft/DRAFT_ALL_ENGLISH_DIALOGUE_NOT_FINAL.wav \
+            -filter_complex '[0:a]volume=0.72[a0];[1:a]volume=1.0[a1];[a0][a1]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.85' \
+            -ar 48000 -c:a aac -b:a 192k output/ENGLISH_AUDITION_WITH_SFX_90S_NOT_FINAL.m4a
+          ffprobe -v error -show_entries stream=sample_rate,channels -show_entries format=duration -of json output/ENGLISH_AUDITION_WITH_SFX_90S_NOT_FINAL.m4a
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-toy-shift-3-ENGLISH-VOICES-AUDITION-ONLY
+          path: |
+            films/the-last-toy-shift/output/ENGLISH_AUDITION_WITH_SFX_90S_NOT_FINAL.m4a
+            films/the-last-toy-shift/output/voices_draft/DRAFT_*.wav
+            films/the-last-toy-shift/output/voices_draft/VOICE_PROVENANCE.json
+          retention-days: 7
+          if-no-files-found: ignore
