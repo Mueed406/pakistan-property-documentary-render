@@ -1,6 +1,6 @@
 # The Last Toy Shift — original 3D production stage
 
-**Status (2026-10-17): IMPLEMENTATION SOURCE ONLY. No movie or verified technical-proof MP4 exists.**
+**Status (2026-10-17): Original 3D production source + verified 16-second, 270×480 at 60fps moving 3D technical diagnostic with original non-dialogue ambience. NO finished 90-second film, professional rigged character or native 1080×1920 final-quality proof exists.** See [technical/artistic QC report](QA_SMOKE_REPORT_20261017.md) and [successful diagnostic workflow](https://github.com/Mueed406/pakistan-property-documentary-render/actions/runs/39059236627).
 
 This folder is a new, isolated production project descended from the documented handoff on PR #11. It is **not** the older property/Urdu project, and should never be presented as a completed fan video. The working title is an **unofficial, non-canon Poppy Playtime fan animation**.
 
