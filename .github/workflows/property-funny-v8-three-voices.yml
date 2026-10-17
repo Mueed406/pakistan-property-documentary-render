@@ -1,0 +1,44 @@
+name: PPG Funny Short V8 - Three Real Voices, Audio First
+on:
+  pull_request:
+    paths:
+      - "shorts/property-funny-v8/role_tts.py"
+      - ".github/workflows/property-funny-v8-three-voices.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  generate-distinct-voices:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install free speech client and FFmpeg decoder
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install "edge-tts>=7,<9"
+      - name: Generate and inspect two separate Pakistani Urdu voices
+        run: |
+          python -u shorts/property-funny-v8/role_tts.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('shorts/property-funny-v8/tts_edge')
+          d=json.loads((p/'VOICE_AUDIT.json').read_text())
+          assert d['generated_edge_lines']==8 and d['buyer_lines_need_original_user_recording']==[3,5,7,11]
+          assert len(list(p.glob('line_*.mp3')))==8
+          PY
+          for f in shorts/property-funny-v8/tts_edge/line_*.mp3; do
+            ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$f"
+          done
+      - name: Preserve individual voice files for local user-supplied Zafar assembly
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-V8-Urdu-Narrator-Dealer-Voices
+          path: shorts/property-funny-v8/tts_edge/
+          retention-days: 7
+          if-no-files-found: error
