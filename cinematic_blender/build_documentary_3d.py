@@ -187,20 +187,39 @@ def building_animation(asset):
  root=import_architecture(asset)
  root.location.x-=1;root.location.y+=1
  # Additional realistically detailed tower portions and glowing window bands.
- for x in (-10,10):
-  for y in (7,):
-   base=box("PBR reinforced tower structure",(x,y,5.9),(7.5,7.5,12),CONCRETE,.2)
-   for level in range(6):
-    z=1+level*1.73
-    for side in (-1,1):
-     for i in range(4):
-      box("Architectural reflective glazing",(x-2.5+i*1.67,y+side*3.86,z),(.95,.09,1.3),GLASS,.016)
-  # Night time architectural light sources on actual 3D facade.
- add_light("Building reveal cinematic rim",(-10,-9,11),2900,(.40,.76,1),7)
+ # Never add empty cube towers: the hero architecture comes from the
+ # licensed Poly Haven facade geometry. The prior preview failed artistic QC
+ # because placeholder towers dominated the image.
+ # Re-texture only missing/magenta materials, preserving legitimate PBR.
+ for ob in bpy.context.collection.objects:
+  if ob.type!="MESH" or ob.parent!=root:continue
+  for slot in ob.material_slots:
+   original=slot.material
+   broken=False
+   if not original:broken=True
+   elif original.use_nodes:
+    for node in original.node_tree.nodes:
+     if node.type=="TEX_IMAGE" and node.image:
+      if not node.image.packed_file and not Path(bpy.path.abspath(node.image.filepath)).exists():
+       broken=True
+   if broken:
+    name=(ob.name+" "+(original.name if original else "")).lower()
+    slot.material=GLASS if ("glass" in name or "window" in name) else CONCRETE
+ # Architectural documentary site dressing: roads and measured lot,
+ # glass-fronted smaller volumes, illuminated entry, camera-parallax elements.
+ box("Physical approach road",(0,-10,-.015),(40,8,.04),ROAD,.03)
+ for x in (-15,-10,-5,0,5,10,15):
+  box("Road lane markings",(x,-9.3,.016),(2.25,.09,.01),WHITE,.0)
+ for x in (-11,11):
+  box("Detailed sidewalk curb",(x,-4.5,.11),(4.5,2.2,.23),CONCRETE,.07)
+  for k in range(3):
+   shaft=box("Modern street post",(x+.6*k-1,-5.3,2.6),(0.11,.11,5.2),DARK,.08)
+   box("Streetlight warm diffuser",(x+.6*k-1,-5.3,5.35),(.38,.38,.19),LIGHT,.05)
+ add_light("Building reveal cinematic rim",(-11,-8,13),2400,(.53,.76,1),6)
  # 3D model rises from surveyed lot, not a screenshot/text card.
  root.location.z=-8.5;root.keyframe_insert(data_path="location",frame=1)
  root.location.z=0;root.keyframe_insert(data_path="location",frame=int(FPS*3.1))
- cam("Construction camera crane",[((-28,-39,18),(0,2,6)),((19,-35,21),(0,0,8))],(0,0,7),38,6)
+ cam("Construction camera crane",[((-17,-30,12),(0,1,6)),((17,-26,15),(0,0,7))],(0,0,7),42,7)
  return s
 
 def dossier_animation():
