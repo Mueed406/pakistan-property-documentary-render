@@ -21,8 +21,9 @@ if(final && (width!==1080||height!==1920))throw new Error('Final output must be 
 if(!Number.isInteger(width)||!Number.isInteger(height)||width<270||height<480)throw new Error('Invalid capture size');
 const timeline=JSON.parse(readFileSync('../../templates/fan-animation/poppy_90s_scene_manifest.json','utf8'));
 const proofStart=1800,proofEnd=2760; // 30s–46s; stalker reveal + moving articulated chase
+const sampleStart=Number(args.get('start')??proofStart),sampleEnd=Number(args.get('end')??proofEnd);
 const shots=args.has('all')?timeline.shots.map(s=>({name:s.id,start:s.start_frame,end:s.end_frame_exclusive})):
- [{name:'PROOF_16S_NOT_FINAL',start:Number(args.get('start')||proofStart),end:Number(args.get('end')||proofEnd)}];
+ [{name:'TECHNICAL_'+(sampleEnd-sampleStart)+'FRAMES_'+sampleStart+'_'+sampleEnd+'_NOT_FINAL',start:sampleStart,end:sampleEnd}];
 for(const s of shots)if(s.start<0||s.end>5400||s.end<=s.start||!Number.isInteger(s.start)||!Number.isInteger(s.end))throw new Error('Invalid frame selection');
 mkdirSync('output',{recursive:true});
 const sourceHash=createHash('sha256');

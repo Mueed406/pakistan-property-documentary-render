@@ -1,6 +1,9 @@
 import {readFileSync,existsSync} from 'node:fs';
 import {createHash} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
 export function assertFinalRights(){
+ const upstream=spawnSync('python3',['../../tools/video_production/validate_scene_manifest.py','--render-ready'],{encoding:'utf8'});
+ if(upstream.status!==0)throw new Error('Upstream strict asset-registry gate failed (or Python missing): '+String(upstream.stdout||upstream.stderr).slice(0,1300));
  const gate=JSON.parse(readFileSync('RIGHTS_GATE.json','utf8'));
  const missing=[];
  if(gate.release_authorized!==true)missing.push('project release_authorized=false');

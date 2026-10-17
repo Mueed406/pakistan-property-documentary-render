@@ -26,7 +26,7 @@ npm run validate
 # 16s ORIGINAL TECHNICAL STAND-IN (30–46s chase); not a release film:
 npm run render -- --proof --width=1080 --height=1920
 # Inspect actual encoded file and fps:
-node scripts/check_proof.mjs output/PROOF_16S_NOT_FINAL_<fingerprint>.mp4
+node scripts/check_proof.mjs output/TECHNICAL_960FRAMES_1800_2760_NOT_FINAL_<fingerprint>.mp4 960
 # Optional original temporary non-dialogue ambience:
 python scripts/sound-bed.py --seconds 16 --offset 30 --out output/proof-ambient.wav
 ```

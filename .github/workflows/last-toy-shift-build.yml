@@ -48,7 +48,7 @@ jobs:
       - name: Real WebGL render smoke (60 distinct indexed frames, ORIGINAL stand-ins only)
         run: npm run render -- --start=1800 --end=1860 --width=270 --height=480
       - name: Confirm actual encoded H264 frames
-        run: node scripts/check_proof.mjs $(find output -type f -name 'PROOF_16S_NOT_FINAL_*.mp4' | head -1)
+        run: node scripts/check_proof.mjs $(find output -type f -name 'TECHNICAL_60FRAMES_1800_1860_NOT_FINAL_*.mp4' | head -1) 60
       - uses: actions/upload-artifact@v4
         if: always()
         with:
