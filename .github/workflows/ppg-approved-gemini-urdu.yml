@@ -1,9 +1,5 @@
 name: PPG Approved Gemini Urdu Full Voice
 on:
-  pull_request:
-    paths:
-      - .github/workflows/ppg-approved-gemini-urdu.yml
-      - gemini_full_voice.py
   workflow_dispatch:
 permissions:
   contents: read
