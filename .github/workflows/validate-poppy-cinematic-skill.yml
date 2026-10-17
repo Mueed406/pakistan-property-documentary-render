@@ -1,0 +1,59 @@
+name: Poppy Cinematic Skill — Installable Format and Plan Checks
+
+on:
+  pull_request:
+    paths:
+      - 'skills/poppy-cinematic-fan-animation/**'
+      - '.github/workflows/validate-poppy-cinematic-skill.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-skill:
+    name: Validate skill and deterministic film example
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate portable Python preflight script
+        run: python -m py_compile skills/poppy-cinematic-fan-animation/scripts/validate_project.py
+      - name: Verify SKILL.md metadata and linked reference files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('skills/poppy-cinematic-fan-animation')
+          text=(p/'SKILL.md').read_text(encoding='utf-8')
+          assert text.startswith('---\n')
+          assert '\nname: poppy-cinematic-fan-animation\n' in text
+          assert '\ndescription:' in text
+          required=[
+            'references/shot-storyboard.md',
+            'references/asset-rights.md',
+            'references/render-pipeline.md',
+            'references/audio-and-qa.md',
+            'references/lessons-from-previous-videos.md',
+            'examples/last-toy-shift.json',
+            'examples/asset-ledger.json',
+            'scripts/validate_project.py',
+            'README.md',
+            'LICENSE',
+          ]
+          for item in required:
+            f=p/item
+            assert f.is_file() and f.stat().st_size>100, f'Missing or empty: {item}'
+          print('SKILL_FORMAT_OK: 10 required files + frontmatter')
+          PY
+      - name: Verify shot plan has exactly 5400 coherent frames
+        run: python skills/poppy-cinematic-fan-animation/scripts/validate_project.py
+      - name: Ensure incomplete media is never wrongly marked render-ready
+        run: |
+          if python skills/poppy-cinematic-fan-animation/scripts/validate_project.py --render-ready; then
+            echo 'ERROR: sample must not pass rights/media acquisition without actual source files'; exit 1
+          else
+            echo 'CORRECT: blocked rendering from missing copyrighted/uncleared source'
+          fi
