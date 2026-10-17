@@ -57,6 +57,11 @@ def main():
  v=sub.add_parser("master-voice",help="Master an ALREADY approved existing narrator file")
  v.add_argument("--input",required=True);v.add_argument("--output",required=True)
  m=sub.add_parser("motion-preview",help="Render React/Remotion animation for technical approval")
+ f=sub.add_parser("render-full-browser",help="Produce true full-length HD documentary with eight distinct browser-motion scenes")
+ f.add_argument("--base",required=True,help="Existing verified full-length moving-footage MP4")
+ f.add_argument("--srt",required=True,help="Time-aligned real Urdu subtitle file")
+ f.add_argument("--out",default="renders/Pakistan_Property_Full_Browser_Motion_Review.mp4")
+ f.add_argument("--motion-dir",default="motion-output")
  o=sub.add_parser("export-otio",help="Export editable timeline for external video editors")
  o.add_argument("--decisions",required=True);o.add_argument("--out",required=True)
  r=sub.add_parser("render-stock",help="Render real documentary only with approved audio and matching subtitles")
@@ -83,6 +88,21 @@ def main():
    npm=shutil.which("npm.cmd" if os.name=="nt" else "npm")
    if not npm:raise RuntimeError("Node/npm not installed")
    run([npm,"run","preview"],cwd=ROOT/"motion")
+  if a.action=="render-full-browser":
+   if not Path(a.base).exists() or not Path(a.srt).exists():
+    raise FileNotFoundError("Need the verified 6-7 minute base video AND matching Urdu subtitles")
+   node=shutil.which("node")
+   if not node:raise RuntimeError("Install Node.js 18+ first")
+   for idx in range(8):
+    motiondir=ROOT/a.motion_dir
+    motiondir.mkdir(parents=True,exist_ok=True)
+    path=motiondir/("scene_%02d.mp4"%idx)
+    if not path.exists():
+     run([node,ROOT/"browser_motion"/"render.mjs",
+          ROOT/"browser_motion"/"full_documentary_scenes.html",
+          "--out",path,"--scene",idx,"--width",1920,"--height",1080,"--fps",25,"--seconds",7.5])
+   run([sys.executable,ROOT/"browser_motion"/"full_documentary_assemble.py",
+       "--base",a.base,"--srt",a.srt,"--motion-dir",motiondir,"--out",a.out])
   if a.action=="export-otio":
    run([sys.executable,ROOT/"editorial"/"export_otio.py","--decisions",a.decisions,"--out",a.out])
   if a.action=="render-stock":
