@@ -23,6 +23,11 @@ on:
         type: choice
         required: true
         options: ["false", "true"]
+      synthetic_media:
+        description: "Disclose realistic altered/synthetic scenes or events if applicable"
+        type: choice
+        required: true
+        options: ["true", "false"]
       upload_approval:
         description: "Enter UPLOAD PRIVATE to authorize ONE private upload"
         type: string
@@ -49,6 +54,7 @@ jobs:
       VIDEO_DESCRIPTION: ${{ inputs.video_description }}
       CHANNEL_ID: ${{ inputs.channel_id }}
       MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+      SYNTHETIC_MEDIA: ${{ inputs.synthetic_media }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -80,6 +86,7 @@ jobs:
                   "description":os.environ["VIDEO_DESCRIPTION"],
                   "tags":["Pakistan Property Group","Property Awareness","Documentary"],
                   "made_for_kids":os.environ["MADE_FOR_KIDS"].lower()=="true",
+                  "contains_synthetic_media":os.environ["SYNTHETIC_MEDIA"].lower()=="true",
                   "approved_for_publish":True}
           pathlib.Path("private_upload_manifest.json").write_text(json.dumps(record,indent=2))
           print("PRIVATE UPLOAD MANIFEST READY (no credentials disclosed)")
