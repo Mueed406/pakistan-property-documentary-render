@@ -1,0 +1,73 @@
+name: Last Toy Shift — Original Threadjaw Armature Film Proof
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - '.github/workflows/last-toy-shift-original-threadjaw-model.yml'
+  workflow_dispatch:
+jobs:
+  model-and-animate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Blender and 3D video pipeline
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender ffmpeg
+          blender --version | head -3
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Build procedural ORIGINAL Threadjaw sculpt, armature and NLA motions
+        run: |
+          blender -b --factory-startup --python scripts/blender_make_threadjaw.py > output_threadjaw_builder.log 2>&1 || (tail -140 output_threadjaw_builder.log && exit 1)
+          tail -25 output_threadjaw_builder.log
+      - name: Assert weighted skin, clips, mesh and original provenance
+        run: |
+          python3 - <<'PY'
+          import json,struct,hashlib,pathlib
+          file=pathlib.Path('public/assets/original_threadjaw_stalker.glb')
+          b=file.read_bytes()
+          assert b[:4]==b'glTF' and len(b)>10000
+          jlen,jtag=struct.unpack_from('<II',b,12)
+          assert jtag==0x4E4F534A
+          data=json.loads(b[20:20+jlen].decode())
+          assert len(data.get('skins',[]))>=1,'No skinned armature'
+          assert len(data.get('animations',[]))>=1,'No animations'
+          assert len(data.get('meshes',[]))>=4,'No original 3D mesh'
+          print('ORIGINAL ASSET PASS',json.dumps({
+           'file_size':len(b),'sha256':hashlib.sha256(b).hexdigest(),
+           'skins':len(data['skins']),'clips':[x.get('name') for x in data['animations']],
+           'meshes':len(data['meshes']),'joints':sum(len(s['joints']) for s in data['skins'])
+          },indent=2))
+          PY
+      - name: Acquire real CC0 Poly Haven PBR map trio
+        run: node scripts/acquire-cc0-pbr.mjs
+      - name: Validate TypeScript and canonical timeline
+        run: |
+          npm run build
+          npm run validate
+      - name: Film 90 moving frames of original rigged Threadjaw (not final)
+        run: npm run render -- --mode=threadjaw --start=1800 --end=1890 --width=360 --height=640
+      - name: Verify actual H264 video frame count
+        run: |
+          CLIP=$(find output -maxdepth 1 -name 'THREADJAW_ORIGINAL_90FRAMES_1800_1890_NOT_FINAL_*.mp4' | head -1)
+          test -n "$CLIP"
+          node scripts/check_proof.mjs "$CLIP" 90
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-toy-shift-ORIGINAL-Threadjaw-3D-and-video-NOT-FINAL
+          path: |
+            films/the-last-toy-shift/public/assets/original_threadjaw_stalker.glb
+            films/the-last-toy-shift/public/assets/pbr/CC0_rusty_metal_sheet_asset_manifest.json
+            films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*.mp4
+            films/the-last-toy-shift/output_threadjaw_builder.log
+          retention-days: 7
+          if-no-files-found: ignore
