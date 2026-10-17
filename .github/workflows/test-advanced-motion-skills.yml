@@ -1,0 +1,41 @@
+name: Add advanced professional motion skills — isolated Claude/Codex test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/test-advanced-motion-skills.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  advanced_agent_skills:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install MIT art-direction and shot-composition skills
+        run: |
+          npx --yes skills add iart-ai/motion-design-skills --skill motion-art-direction -a claude-code -y --copy
+          npx --yes skills add iart-ai/motion-design-skills --skill shot-composition -a claude-code -y --copy
+          npx --yes skills add iart-ai/motion-design-skills --skill beat-sync-editing -a claude-code -y --copy
+      - name: Install Apache 2.0 HeyGen HyperFrames browser compositing knowledge
+        run: |
+          npx --yes skills add heygen-com/hyperframes --skill hyperframes-animation -a claude-code -y --copy
+          npx --yes skills add heygen-com/hyperframes --skill hyperframes-cli -a claude-code -y --copy
+          npx --yes skills add heygen-com/hyperframes --skill faceless-explainer -a claude-code -y --copy
+      - name: Verify all six new skills actually landed
+        run: |
+          for skill in motion-art-direction shot-composition beat-sync-editing hyperframes-animation hyperframes-cli faceless-explainer; do
+            test -s ".claude/skills/$skill/SKILL.md" || { echo "Missing skill $skill"; exit 2; }
+          done
+          echo 'Six specialized licensed skills installed successfully in temporary agent workspace.'
+      - name: Keep third-party licenses and provenance manifest
+        run: |
+          echo 'iart-ai/motion-design-skills: MIT. HeyGen HyperFrames: Apache 2.0.'
+          echo 'Skills were installed into the temporary GitHub runner only; do not claim Windows PC install.'
