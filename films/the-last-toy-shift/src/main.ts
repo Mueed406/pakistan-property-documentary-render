@@ -203,6 +203,11 @@ const switchUnit=new THREE.Group();switchUnit.position.set(-4.45,1.7,-7);root.ad
 box(.55,.75,.2,0,0,0,copper,switchUnit);
 box(.32,.37,.1,0,0,.15,dangerMat,switchUnit);
 const spark=new THREE.PointLight(0x9bdfff,0,5);switchUnit.add(spark);spark.position.set(0,0,.3);
+const sparkBuffer=new Float32Array(80*3);
+const sparkGeometry=new THREE.BufferGeometry();
+sparkGeometry.setAttribute('position',new THREE.BufferAttribute(sparkBuffer,3));
+const sparkFX=new THREE.Points(sparkGeometry,new THREE.PointsMaterial({color:0xb4f7ff,size:.077,opacity:.92,transparent:true,depthWrite:false}));
+sparkFX.visible=false;root.add(sparkFX);
 const hand=new THREE.Group();root.add(hand);
 const palm=box(.34,.2,.32,0,0,0,blue,hand);
 for(let i=0;i<4;i++)box(.066,.12,.24,(i-1.5)*.09,.015,-.23,blue,hand);
@@ -220,6 +225,27 @@ for(const x of [-.2,.2]){
  reel.position.set(x,-.35,.7);reel.rotation.x=Math.PI/2;crt.add(reel);reels.push(reel);
 }
 const crtLight=new THREE.PointLight(0x22baa3,3,5);crtLight.position.set(1.4,1.8,-13.5);scene.add(crtLight);
+const crtCanvas=document.createElement('canvas');crtCanvas.width=512;crtCanvas.height=256;
+const crtContext=crtCanvas.getContext('2d')!;
+const crtTexture=new THREE.CanvasTexture(crtCanvas);crtTexture.colorSpace=THREE.SRGBColorSpace;
+screenMat.color.set(0xffffff);screenMat.map=crtTexture;screenMat.emissiveMap=crtTexture;screenMat.needsUpdate=true;
+function drawCrt(globalFrame:number,warning:boolean){
+ crtContext.fillStyle='#041718';crtContext.fillRect(0,0,512,256);
+ crtContext.fillStyle='#2bdcbb';crtContext.font='bold 26px monospace';
+ if(warning){
+  crtContext.fillText('FACTORY SAFETY',36,73);
+  crtContext.fillText('DO NOT FOLLOW',36,124);
+  crtContext.fillText('THE FOOTSTEPS',36,160);
+ }else crtContext.fillText('NO SIGNAL',36,126);
+ crtContext.fillStyle='rgba(2,5,7,0.27)';
+ for(let y=(globalFrame%5);y<256;y+=5)crtContext.fillRect(0,y,512,2);
+ if(warning){
+  const g=(globalFrame*53)%241;
+  crtContext.fillStyle='rgba(193,255,248,0.13)';
+  crtContext.fillRect(0,g,512,2);
+ }
+ crtTexture.needsUpdate=true;
+}
 
 const doorGroup=new THREE.Group();doorGroup.position.set(0,2,-32);root.add(doorGroup);
 box(5.4,5,.65,0,0,-.08,dark,doorGroup);
@@ -337,6 +363,18 @@ function renderFrame(frame:number){
  grabLine.geometry=new THREE.BufferGeometry().setFromPoints(vertices);
  grabLine.visible=hand.visible;
  spark.intensity=index===1 && u>.4 && u<.74?8*(.6+.4*Math.sin(t*87)):0;
+ const sparking=index===1&&u>.4&&u<.74;
+ sparkFX.visible=sparking;
+ if(sparking){
+  for(let i=0;i<80;i++){
+   const a=i*2.399963+frame*.092;
+   const r=.04+((i*97+frame*13)%100)/100*.65;
+   sparkBuffer[i*3]=-4.45+Math.cos(a)*r;
+   sparkBuffer[i*3+1]=1.7+Math.sin(a)*r*.55;
+   sparkBuffer[i*3+2]=-6.7+Math.sin(a*1.21)*r*.6;
+  }
+  (sparkGeometry.attributes.position as THREE.BufferAttribute).needsUpdate=true;
+ }
  const attack=index===5?smooth(u):index===9?smooth(u):0;
  creature.rig.position.set(.2*Math.sin(t*1.2),0,index===5?-28+attack*9:index===9?-41+attack*6:-28);
  const gait=(index===5||index===9)?Math.sin(t*12):Math.sin(t*1.5)*.12;
@@ -356,6 +394,7 @@ function renderFrame(frame:number){
  for(const r of reels)r.rotation.z=t*3.3;
  crtLight.intensity=index===3?7:1;
  screenMat.emissiveIntensity=index===3?1.7*(.92+.08*Math.sin(t*47)):.25;
+ if(index===3 || frame===0)drawCrt(frame,index===3);
  for(const mixer of externalMixer)mixer.setTime(t);
  slate.style.opacity=index===10?String(smooth(u*5)*(1-smooth((u-.83)*5))):'0';
  // End slate is deliberate black to preserve a separate 5-second fan disclaimer.
