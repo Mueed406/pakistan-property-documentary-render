@@ -1,0 +1,127 @@
+name: PPG Editorial Full Documentary 1080p60
+on:
+  pull_request:
+    paths: ['.github/workflows/ppg-editorial-full-60fps.yml', 'editorial_collage/full_60fps/**']
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+jobs:
+  render_motion:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [0,1,2,3,4]
+    env:
+      PPG_FULL_ROOT: ${{ github.workspace }}/working
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install rendering dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-inter fonts-roboto fonts-dejavu-core fonts-liberation2 fonts-noto-core
+          python -m pip install numpy pillow opencv-python-headless
+      - name: Recover original stock master
+        uses: actions/download-artifact@v4
+        with:
+          name: pakistan-property-urdu-stock-documentary
+          run-id: 38962816235
+          github-token: ${{ github.token }}
+          path: working/base
+      - name: Fetch licensed photos from verified CI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PPG-Editorial-CC0-Image-Pack
+          run-id: 39002227657
+          github-token: ${{ github.token }}
+          path: working/assets/cc0_downloads
+      - name: Generate original paper and newsprint textures
+        run: python editorial_collage/prepare_assets.py --base working/base/renders/Pakistan_Property_Stock_Documentary_FINAL.mp4 --out working/assets
+      - name: Render 10 native-60fps premium motion chapters
+        run: |
+          FIRST=$(( ${{ matrix.group }} * 10 ))
+          LAST=$(( FIRST + 10 ))
+          python -u editorial_collage/full_60fps/build_full.py --start "$FIRST" --end "$LAST" --threads 2
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPG-editorial-scenes-group-${{ matrix.group }}
+          path: working/motion/shot_*.mp4
+          retention-days: 7
+          if-no-files-found: error
+  assemble_release:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    needs: render_motion
+    runs-on: ubuntu-24.04
+    timeout-minutes: 95
+    env:
+      PPG_FULL_ROOT: ${{ github.workspace }}/working
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install video assembly dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-noto-core
+          python -m pip install numpy pillow opencv-python-headless
+      - uses: actions/download-artifact@v4
+        with:
+          name: pakistan-property-urdu-stock-documentary
+          run-id: 38962816235
+          github-token: ${{ github.token }}
+          path: working/base
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: PPG-editorial-scenes-group-*
+          merge-multiple: true
+          path: working/motion
+      - name: Confirm 50 actual motion clips
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=list(Path('working/motion').glob('shot_*.mp4'))
+          assert len(p)==50, len(p)
+          assert all(x.stat().st_size>100000 for x in p)
+          print('ALL 50 ANIMATED SCENES VERIFIED')
+          PY
+      - name: Generate synchronized Urdu story map
+        run: python editorial_collage/full_60fps/build_full.py --start 0 --end 0 --only-art
+      - name: Assemble 410s full-length 60fps documentary
+        run: python -u editorial_collage/full_60fps/assemble_full.py
+      - name: Verify real movie has 410s, 1920x1080, 60fps and AAC
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          from pathlib import Path
+          p=Path('working/master/PPG_Editorial_Documentary_FULL_410s_1080p60.mp4')
+          assert p.is_file() and p.stat().st_size>50000000
+          d=json.loads(subprocess.check_output(['ffprobe','-v','error','-show_streams','-show_format','-of','json',str(p)]))
+          v=next(s for s in d['streams'] if s['codec_type']=='video')
+          a=next(s for s in d['streams'] if s['codec_type']=='audio')
+          assert (v['width'],v['height'],v['r_frame_rate'])==(1920,1080,'60/1')
+          assert a['codec_name']=='aac' and 409<float(d['format']['duration'])<411
+          print('FULL MP4 VERIFIED',d['format']['duration'])
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Full-410s-Editorial-1080p60-MP4
+          path: |
+            working/master/PPG_Editorial_Documentary_FULL_410s_1080p60.mp4
+            working/master/MASTER_TECHNICAL_REPORT.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Publish direct MP4 GitHub prerelease download
+        run: |
+          TAG=ppg-410s-editorial-1080p60-review-20261017
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --target "${{ github.sha }}" --title "PPG Full 6m50 Editorial Documentary — 1080p60 Review" --prerelease --notes "Fifty original 60fps editorial chapters. The audio remains the older existing Urdu voice because Gemini TTS hit HTTP 429 quota. The film depicts reported allegations, not proven court findings. Review cut, not a YouTube publication."
+          fi
+          gh release upload "$TAG" working/master/PPG_Editorial_Documentary_FULL_410s_1080p60.mp4 working/master/MASTER_TECHNICAL_REPORT.json --clobber
