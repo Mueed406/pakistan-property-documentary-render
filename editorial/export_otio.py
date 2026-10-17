@@ -10,7 +10,9 @@ from pathlib import Path
 
 def build(source,target,fps=25):
  import opentimelineio as otio
- shots=json.loads(Path(source).read_text(encoding="utf8"))
+ shots=json.loads(Path(source).read_text(encoding="utf8-sig"))
+ if isinstance(shots,dict):shots=[shots]
+ if not isinstance(shots,list):raise ValueError("Expected JSON list of shots or one shot object")
  if not shots:raise RuntimeError("No edit decisions")
  timeline=otio.schema.Timeline(name="Pakistan Property Group Documentary / Picture Edit")
  track=otio.schema.Track(name="Real Stock Footage",kind=otio.schema.TrackKind.Video)
