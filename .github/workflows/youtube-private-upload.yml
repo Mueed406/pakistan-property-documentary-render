@@ -1,0 +1,101 @@
+name: YouTube — Verified PRIVATE Documentary Upload
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Exact GitHub Release containing the approved MP4"
+        required: true
+        type: string
+      channel_id:
+        description: "Target YouTube channel ID; OAuth must own it"
+        required: true
+        type: string
+      video_title:
+        description: "Final checked YouTube title"
+        required: true
+        type: string
+      video_description:
+        description: "Final source-cited description including allegation qualifiers"
+        required: true
+        type: string
+      made_for_kids:
+        description: "Select according to the actual intended audience"
+        type: choice
+        required: true
+        options: ["false", "true"]
+      upload_approval:
+        description: "Enter UPLOAD PRIVATE to authorize ONE private upload"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: youtube-private-${{ inputs.release_tag }}-${{ inputs.channel_id }}
+  cancel-in-progress: false
+
+jobs:
+  private-upload:
+    if: inputs.upload_approval == 'UPLOAD PRIVATE'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+      YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+      YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+      VIDEO_TITLE: ${{ inputs.video_title }}
+      VIDEO_DESCRIPTION: ${{ inputs.video_description }}
+      CHANNEL_ID: ${{ inputs.channel_id }}
+      MADE_FOR_KIDS: ${{ inputs.made_for_kids }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify OAuth secret configuration (never print actual values)
+        run: |
+          test -n "$YOUTUBE_CLIENT_ID" || { echo "Missing YOUTUBE_CLIENT_ID"; exit 1; }
+          test -n "$YOUTUBE_CLIENT_SECRET" || { echo "Missing YOUTUBE_CLIENT_SECRET"; exit 1; }
+          test -n "$YOUTUBE_REFRESH_TOKEN" || { echo "Missing YOUTUBE_REFRESH_TOKEN"; exit 1; }
+      - name: Download the EXACT previously rendered GitHub Release MP4
+        env:
+          TAG: ${{ inputs.release_tag }}
+        run: |
+          mkdir -p input
+          gh release download "$TAG" --repo "${{ github.repository }}" -p '*.mp4' -D input
+          test "$(find input -maxdepth 1 -name '*.mp4' -type f | wc -l)" -eq 1
+          test "$(stat -c%s input/*.mp4)" -gt 1000000
+      - name: Build private upload manifest from reviewed user inputs
+        run: |
+          python - <<'PY'
+          import glob,json,os,pathlib
+          file=pathlib.Path(glob.glob("input/*.mp4")[0])
+          assert file.is_file()
+          record={"video_path":str(file.resolve()),
+                  "channel_id":os.environ["CHANNEL_ID"],
+                  "privacyStatus":"private",
+                  "title":os.environ["VIDEO_TITLE"],
+                  "description":os.environ["VIDEO_DESCRIPTION"],
+                  "tags":["Pakistan Property Group","Property Awareness","Documentary"],
+                  "made_for_kids":os.environ["MADE_FOR_KIDS"].lower()=="true",
+                  "approved_for_publish":True}
+          pathlib.Path("private_upload_manifest.json").write_text(json.dumps(record,indent=2))
+          print("PRIVATE UPLOAD MANIFEST READY (no credentials disclosed)")
+          PY
+      - name: Install official YouTube API SDK
+        run: python -m pip install 'google-api-python-client>=2,<3' 'google-auth>=2,<3' 'google-auth-httplib2>=0.2,<1'
+      - name: Upload PRIVATE through authorized channel (no auto-publication)
+        run: |
+          python -u production/youtube_private_upload.py \
+            --manifest private_upload_manifest.json --channel-id "$CHANNEL_ID" \
+            --receipt private_upload_receipt.json --execute
+      - name: Archive YouTube video ID, upload receipt and safety status
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: youtube-private-upload-receipt
+          path: private_upload_receipt.json
+          retention-days: 30
+          if-no-files-found: error
