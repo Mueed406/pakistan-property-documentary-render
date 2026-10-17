@@ -113,8 +113,11 @@ for(let z=10;z>=-48;z-=8){
  box(1.2,.1,.45,0,7.09,z,metal);
  box(.7,.055,.3,0,6.99,z,new THREE.MeshStandardMaterial({color:0xb7c9d2,emissive:0xc4e4ee,emissiveIntensity:1.1}));
 }
-scene.add(new THREE.HemisphereLight(0x688c9d,0x1e120f,1.1));
-const rim=new THREE.PointLight(0xd44d2d,18,17);rim.position.set(2.5,3,-30);scene.add(rim);
+scene.add(new THREE.HemisphereLight(0x92abb7,0x372c27,2.1));
+const rim=new THREE.PointLight(0xd44d2d,23,22);rim.position.set(2.5,3,-30);scene.add(rim);
+const coldFill=new THREE.SpotLight(0xb6ddf3,145,36,.67,.7,1.45);
+coldFill.position.set(3.5,6.6,-20);coldFill.target.position.set(0,1.8,-28);
+coldFill.castShadow=true;coldFill.shadow.mapSize.set(1024,1024);scene.add(coldFill,coldFill.target);
 
 // Conveyor: all components occupy real world-space, with perspective and occlusion.
 const conveyor=new THREE.Group();root.add(conveyor);
@@ -133,9 +136,30 @@ for(let i=0;i<11;i++)boxes.push(box(.55+(i%3)*.1,.46+(i%2)*.23,.6,0,1.25,0,i%2?c
 // RELEASE requires licensed and validated skinned GLB via GLTFLoader.
 function makeToy(height:number,bodyMat:THREE.Material){
  const rig=new THREE.Group(),pelvis=new THREE.Group();rig.add(pelvis);
- const torso=box(.6*height,.56*height,.35*height,0,.58*height,0,bodyMat,pelvis);
+ const torso=ball(.34*height,0,.59*height,0,bodyMat,pelvis);
+ torso.scale.set(1.04,1.25,.72);
  const neck=new THREE.Group();neck.position.y=.89*height;pelvis.add(neck);
  ball(.28*height,0,.18*height,0,bodyMat,neck);
+ const mouthMat=new THREE.MeshStandardMaterial({color:0x65222a,roughness:.82});
+ const mouth=ball(.16*height,0,.05*height,.26*height,mouthMat,neck);
+ mouth.scale.set(1.26,.5,.30);
+ for(let k=-3;k<=3;k++){
+  const tooth=new THREE.Mesh(new THREE.ConeGeometry(.026*height,.063*height,5),eyeWhite);
+  tooth.position.set(k*.038*height,.07*height,.312*height);
+  tooth.rotation.z=Math.PI;neck.add(tooth);
+ }
+ if(height>2){
+  const furGeo=new THREE.ConeGeometry(.014*height,.075*height,4);
+  const fur=new THREE.InstancedMesh(furGeo,bodyMat,180);
+  const obj=new THREE.Object3D();const up=vec(0,1,0);
+  for(let i=0;i<180;i++){
+   const phi=Math.acos(1-2*(i+.5)/180),theta=i*2.399963;
+   const normal=vec(Math.sin(phi)*Math.cos(theta),Math.cos(phi),Math.sin(phi)*Math.sin(theta));
+   obj.position.copy(normal).multiplyScalar(.278*height).add(vec(0,.18*height,0));
+   obj.quaternion.setFromUnitVectors(up,normal);obj.scale.setScalar(.65+(.35*(i%7)/6));obj.updateMatrix();fur.setMatrixAt(i,obj.matrix);
+  }
+  fur.castShadow=true;neck.add(fur);
+ }
  for(const x of [-.12,.12]){
   ball(.095*height,x,.2*height,.249*height,eyeWhite,neck);
   ball(.044*height,x,.19*height,.329*height,iris,neck);
