@@ -1,0 +1,102 @@
+name: PPG — Rebuild 43s Editorial Video (1080p / 60 FPS)
+on:
+  push:
+    branches:
+      - downloads/ppg-43s-60fps-video
+    paths:
+      - 'video_delivery/**'
+      - '.github/workflows/ppg-video-download.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  render_and_publish:
+    name: Rebuild actual Full-HD 60 FPS movie and upload downloadable MP4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install full motion and typography stack
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg fonts-inter fonts-roboto fonts-dejavu-core fonts-liberation2 fonts-noto-core fonts-noto-extra
+          python -m pip install --upgrade pip
+          python -m pip install "numpy>=1.26,<3" "Pillow>=10,<13" "opencv-python-headless>=4.9,<5"
+          python -m py_compile video_delivery/build_premium.py editorial_collage/prepare_assets.py
+      - name: Recover existing verified documentary, audio and subtitles
+        uses: actions/download-artifact@v4
+        with:
+          name: PPG-PREMIUM-PEARL-24-MOTION-FULL-410s-MP4
+          run-id: 38998902708
+          github-token: ${{ github.token }}
+          path: recovered
+      - name: Recover original CC0 photo assets from completed workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: PPG-Editorial-CC0-Image-Pack
+          run-id: 39002227657
+          github-token: ${{ github.token }}
+          path: cc0photos
+      - name: Reconstitute original editable art and existing film
+        run: |
+          mkdir -p video_delivery/source/renders video_delivery/source/baseline video_delivery/assets/cc0_downloads
+          cp recovered/renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4 video_delivery/source/renders/
+          cp recovered/urdu_timed.srt video_delivery/source/baseline/
+          find cc0photos -type f | head -20
+          find cc0photos -name '*.jpg' -exec cp '{}' video_delivery/assets/cc0_downloads/ \;
+          for f in islamabad_panorama_cc0.jpg construction_crane_cc0.jpg crane_workers_cc0.jpg; do test -s "video_delivery/assets/cc0_downloads/$f"; done
+          python -u editorial_collage/prepare_assets.py --base video_delivery/source/renders/Pakistan_Property_Premium_Pearl_24_Motion_FullHD_Review.mp4 --out video_delivery/assets
+          base64 -d video_delivery/reference_previous.b64 > video_delivery/assets/reference_previous.jpg
+          file video_delivery/assets/reference_previous.jpg
+          test -s video_delivery/assets/paper.png
+          test -s video_delivery/assets/newsprint.png
+      - name: Render 1,536 unique moving collage frames at 1920x1080, 60fps
+        env:
+          PPG_REFERENCE: video_delivery/assets/reference_previous.jpg
+        run: |
+          python -u video_delivery/build_premium.py
+      - name: Rebuild seamless documentary-animated-documentary continuity film
+        run: |
+          bash video_delivery/integrate_existing_master.sh
+      - name: Verify exact technical video constraints before delivery
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json,subprocess
+          p=Path("video_delivery/out/PPG_Editorial_60FPS_Continuity_43s.mp4")
+          assert p.is_file() and p.stat().st_size>2_000_000,p
+          info=json.loads(subprocess.check_output(["ffprobe","-v","error","-show_format","-show_streams","-of","json",str(p)]))
+          v=next(s for s in info["streams"] if s["codec_type"]=="video")
+          a=next(s for s in info["streams"] if s["codec_type"]=="audio")
+          d=float(info["format"]["duration"])
+          assert v["codec_name"]=="h264" and (v["width"],v["height"])==(1920,1080),v
+          assert v["avg_frame_rate"]=="60/1",v
+          assert a["codec_name"]=="aac",a
+          assert 42.8<=d<=43.8,d
+          print("DOWNLOAD VIDEO VERIFIED:",p,d,"seconds",round(p.stat().st_size/1e6,1),"MB",v["avg_frame_rate"])
+          PY
+      - name: Upload MP4 to GitHub Actions for immediate user download
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Editorial-43s-1080p-60FPS-MP4
+          path: video_delivery/out/PPG_Editorial_60FPS_Continuity_43s.mp4
+          retention-days: 30
+          if-no-files-found: error
+      - name: Add direct downloadable MP4 as GitHub prerelease asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        continue-on-error: true
+        run: |
+          gh release create ppg-43s-60fps-review-20261017 \
+            video_delivery/out/PPG_Editorial_60FPS_Continuity_43s.mp4 \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Pakistan Property Group — 43s 1080p/60fps editorial review cut" \
+            --notes "Working 43-second original footage → animated paper-collage → footage review cut. Rebuilt in GitHub Actions from the existing film and original editable render engine; not the final 410-second documentary." \
+            --prerelease --clobber
