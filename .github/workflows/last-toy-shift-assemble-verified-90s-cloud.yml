@@ -1,0 +1,82 @@
+name: Last Toy Shift — Assemble Verified 90s Film Without Rerender
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - '.github/workflows/last-toy-shift-assemble-verified-90s-cloud.yml'
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: read
+jobs:
+  compile-verified-film:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install audiovisual validation tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Retrieve all 11 independently frame-verified ORIGINAL 3D shots
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39102572740
+          github-token: ${{ github.token }}
+          pattern: lasttoy90-shot-*
+          merge-multiple: true
+          path: films/the-last-toy-shift/output
+      - name: Retrieve actual English Kokoro 90-second recorded soundtrack and subtitles
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p audio
+          gh run download 39097760161 --repo ${{ github.repository }} \
+            -n the-last-toy-shift-90s-REAL-KOKORO-CLOUD-CPU-English-audition-NOT-FINAL \
+            -D audio
+          test -f audio/ACTUAL_CUE_TIMES_DRAFT.srt
+          echo '4e9054332da14b9c1789d666bea4934860defedb5c46a8bf69b1c5cc587f3be7  audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a' | sha256sum --check -
+      - name: Assemble all 5400 frames into 90s English workprint and captioned 1080 upscale
+        run: |
+          node scripts/assemble_workprint.mjs \
+            --audio=audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a \
+            --srt=audio/ACTUAL_CUE_TIMES_DRAFT.srt
+      - name: Confirm full movie frame count/duration and actual audio
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          from pathlib import Path
+          q=json.loads(Path('output/FULL_90S_WORKPRINT_QA.json').read_text())
+          assert q['video_frames']==5400 and q['runtime_seconds']==90
+          assert q['release_authorized'] is False
+          assert len(q['scenes'])==11
+          for filename,w,h in [('THE_LAST_TOY_SHIFT_FULL_90S_360X640_60FPS_WORKPRINT_NOT_FINAL.mp4',360,640),
+                               ('THE_LAST_TOY_SHIFT_FULL_90S_1080X1920_UPSCALED_WORKPRINT_NOT_FINAL.mp4',1080,1920)]:
+            f='output/'+filename
+            p=json.loads(subprocess.check_output(['ffprobe','-v','error','-count_frames',
+                '-show_entries','stream=codec_name,codec_type,nb_read_frames,width,height,sample_rate,channels,avg_frame_rate:format=duration',
+                '-of','json',f]))
+            v=next(s for s in p['streams'] if s['codec_type']=='video')
+            a=next(s for s in p['streams'] if s['codec_type']=='audio')
+            assert int(v['nb_read_frames'])==5400 and v['avg_frame_rate']=='60/1'
+            assert (v['width'],v['height'])==(w,h)
+            assert a['codec_name']=='aac' and a['sample_rate']=='48000' and a['channels']==2
+            assert abs(float(p['format']['duration'])-90)<.07
+            print('PASS',f,'90 seconds / 5400 frames + actual English audio')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: THE-LAST-TOY-SHIFT-COMPLETE-90S-1080-UPSCALED-ORIGINAL-3D-AUDIO-WORKPRINT
+          path: |
+            films/the-last-toy-shift/output/THE_LAST_TOY_SHIFT_FULL_90S_*.mp4
+            films/the-last-toy-shift/output/FULL_90S_WORKPRINT_QA.json
+            films/the-last-toy-shift/audio/ACTUAL_CUE_TIMES_DRAFT.srt
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
