@@ -66,7 +66,7 @@ A saved plugin is not the same as a locally connected Blender desktop MCP tool. 
 The reproducible GitHub Actions installer:
 .github/workflows/creative-skills-and-sketchfab-install.yml
 
-CI checks that exactly 55 motion + 16 Blender folders are present, validates pinned commits, and downloads the original Sketchfab release with its published SHA-256 and safe archive paths. It exports ZIPs as short-retention GitHub Actions artifacts (not a permanent public release).
+CI checks exactly 55 motion + 16 Blender folders, validates pinned commits, verifies the published Sketchfab ZIP SHA-256 and safe archive paths, then actually installs and enables the official Sketchfab add-on inside a disposable Blender runner (module sketchfab-plugin-1-8-0). The add-on is NOT installed on your local Windows machine until you run the installer or use Blender's GUI. It exports ZIPs as short-retention GitHub Actions artifacts (not a permanent public release).
 
 All motion-skill recipes remain credited to **iart.ai**. Blender skill files remain in and are downloaded directly from **kevinbadi/blender-skills**. Official Sketchfab addon is Apache-2.0. Do not upload third-party files from a repository without confirming redistribution rights.
 
