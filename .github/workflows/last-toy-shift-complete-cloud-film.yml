@@ -18,7 +18,6 @@ jobs:
       max-parallel: 11
       matrix:
         shot:
-          include:
           - {id: "01", start: 0, end: 300, frames: 300}
           - {id: "02", start: 300, end: 720, frames: 420}
           - {id: "03", start: 720, end: 1200, frames: 480}
