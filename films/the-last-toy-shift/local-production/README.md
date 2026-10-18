@@ -26,6 +26,18 @@ To maintain three distinct voices, the script requires permissioned hero.wav, ta
 
 Auto backend selects Turbo when all three consented references are present and CUDA has at least 6GiB VRAM, otherwise Kokoro. This is a conservative routing heuristic, not a guarantee of GPU RAM fit. You may need different Python environments for Kokoro and Chatterbox if upstream dependencies conflict. First model use downloads official model weights; cached models can run locally without cloud TTS.
 
+
+## AMD / older NVIDIA GPU: Kokoro ONNX DirectML
+
+For Windows GPUs that cannot run the installed CUDA PyTorch kernels (for example, some legacy NVIDIA Maxwell GPUs) or for AMD Radeon hardware, choose the independently licensed Kokoro ONNX implementation (MIT wrapper / Apache Kokoro model) with the DirectML provider.
+
+    powershell -File .\local-production\setup-tts-windows.ps1 -FilmPath "." -Engine directml
+    .\.venv-tts\Scripts\python.exe .\local-production\voice_gpu.py generate --backend kokoro-directml --require-gpu --output output\local-voice
+
+This downloads the official Kokoro ONNX 1.0 model (325.5MB) and voices (28.2MB) from https://github.com/thewh1teagle/kokoro-onnx/releases/tag/model-files-v1.1 with their developer-published SHA256 digests verified BEFORE the model loads. The script explicitly requires an ONNX DmlExecutionProvider, creates an ONNX session with that provider, and fails if the provider is unavailable rather than silently pretending GPU use. Some ONNX operations may still use CPU fallback; this is normal in hybrid GPU+CPU inference.
+
+For AMD RX 560/RX 570, DirectML support depends on the actual Windows version, GPU driver, and model operators, so run it on the PC to establish compatibility. For NVIDIA Quadro M4000, modern CUDA builds may lack Maxwell kernels; DirectML is the alternative to test. The user has previously operated different PCs, so GPU identity MUST be confirmed on the machine that runs the film.
+
 ## Optional NoizAI skills
 
 Source: https://github.com/NoizAI/skills , pinned commit 779f30af588ebf4dd17fc0acaa590ae147a0d3f5. The project provides a local pinned-source installer for the upstream TTS skill:
