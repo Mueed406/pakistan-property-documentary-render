@@ -69,10 +69,51 @@ def wav(path,mono):
         w.setnchannels(2);w.setsampwidth(2);w.setframerate(RATE)
         w.writeframes((stereo*32767).astype("<i2").tobytes())
 
+
+def ondemand_model_files():
+    """Acquire fixed, officially checksum-published Kokoro ONNX binary weights."""
+    from urllib.request import Request, urlopen
+    root=Path(__file__).resolve().parent/"private_model_cache"
+    root.mkdir(parents=True,exist_ok=True)
+    assets=[
+        ("kokoro-v1.0.onnx","beb0d1848dee9a49da392cc3df26958d46cfa35d321edf434f52949153f0df3a"),
+        ("voices-v1.0.bin","bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d")]
+    results=[]
+    for filename,expected in assets:
+        dest=root/filename
+        if not dest.exists() or hashlib.sha256(dest.read_bytes()).hexdigest()!=expected:
+            url="https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.1/"+filename
+            req=Request(url,headers={"User-Agent":"TheLastToyShift/1.0 (original local TTS)"})
+            with urlopen(req,timeout=120) as resp:
+                data=resp.read()
+            if hashlib.sha256(data).hexdigest()!=expected:
+                raise RuntimeError("Kokoro ONNX published SHA256 mismatch: "+filename)
+            dest.write_bytes(data)
+        results.append(dest)
+    return results
+
+def init_directml():
+    import onnxruntime as ort
+    from kokoro_onnx import Kokoro
+    available=ort.get_available_providers()
+    if "DmlExecutionProvider" not in available:
+        raise RuntimeError("DirectML ONNX GPU provider absent: "+str(available)+
+                           ". Install onnxruntime-directml and a compatible Windows GPU driver.")
+    model,voices=ondemand_model_files()
+    options=ort.SessionOptions()
+    options.enable_mem_pattern=False
+    options.execution_mode=ort.ExecutionMode.ORT_SEQUENTIAL
+    options.intra_op_num_threads=min(os.cpu_count() or 4,8)
+    session=ort.InferenceSession(str(model),sess_options=options,
+                                  providers=["DmlExecutionProvider","CPUExecutionProvider"])
+    if "DmlExecutionProvider" not in session.get_providers():
+        raise RuntimeError("ONNX fell back to CPU; stop before claiming GPU synthesis")
+    return Kokoro.from_session(session,str(voices)),session.get_providers()
+
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("action",choices=["probe","generate"])
-    p.add_argument("--backend",choices=["auto","kokoro","chatterbox-original","chatterbox-turbo","chatterbox-nano"],default="auto")
+    p.add_argument("--backend",choices=["auto","kokoro","kokoro-directml","chatterbox-original","chatterbox-turbo","chatterbox-nano"],default="auto")
     p.add_argument("--references",default="")
     p.add_argument("--require-gpu",action="store_true")
     p.add_argument("--output",default="output/local-voice")
@@ -86,22 +127,40 @@ def main():
         print(json.dumps(hw,indent=2));return
     import numpy as np
     import torch
-    if args.require_gpu and hw["device"]=="cpu":raise RuntimeError("CUDA/MPS unavailable. GPU not used: "+str(hw))
+    if args.require_gpu and hw["device"]=="cpu" and args.backend!="kokoro-directml" and args.backend!="auto":
+        raise RuntimeError("CUDA/MPS unavailable. GPU not used: "+str(hw))
     base=Path(__file__).resolve().parent
     plan=json.loads((base/"dialogue_plan.json").read_text(encoding="utf8"))
     assert plan["timeline_seconds"]==90 and len(plan["cues"])==6 and len(plan["characters"])==3
     refs=references(args.references,plan["characters"])
     backend=args.backend
     if backend=="auto":
-        backend="chatterbox-turbo" if refs and hw["device"]=="cuda" and (hw["vram_gb"] or 0)>=6 else "kokoro"
+        if refs and hw["device"]=="cuda" and (hw["vram_gb"] or 0)>=6:
+            backend="chatterbox-turbo"
+        elif hw["device"]!="cuda":
+            try:
+                import onnxruntime as ort
+                backend="kokoro-directml" if "DmlExecutionProvider" in ort.get_available_providers() else "kokoro"
+            except ImportError:
+                backend="kokoro"
+        else:backend="kokoro"
+    if backend=="kokoro-directml":
+        engine,ort_providers=init_directml()
+        hw["onnx_execution_providers"]=ort_providers
+        hw["device"]="directml"
+        hw["name"]="Windows DirectML inference provider"
     if backend.startswith("chatterbox") and not refs:
         raise RuntimeError("Chatterbox requires consented hero.wav, tape.wav, doll.wav and consent.json in --references")
+    if args.require_gpu and hw["device"]=="cpu":
+        raise RuntimeError("No GPU backend usable on this hardware: "+str(hw))
     if backend=="kokoro":
         from kokoro import KPipeline
         try:engine=KPipeline(lang_code="a",device=hw["device"])
         except TypeError:
             if hw["device"]!="cpu":raise RuntimeError("Installed Kokoro does not accept device. Update it before claiming GPU use.")
             engine=KPipeline(lang_code="a")
+    elif backend=="kokoro-directml":
+        pass
     elif backend=="chatterbox-original":
         from chatterbox.tts import ChatterboxTTS
         engine=ChatterboxTTS.from_pretrained(device=hw["device"])
@@ -112,7 +171,10 @@ def main():
     tracks={name:np.zeros(RATE*90,dtype=np.float32) for name in plan["characters"]}
     cues=[]
     for role,start,slot,words in plan["cues"]:
-        if backend=="kokoro":
+        if backend=="kokoro-directml":
+            data,sr=engine.create(words,voice=plan["characters"][role]["voice"],speed=1.0,lang="en-us")
+            signal=to_48k(data,sr)
+        elif backend=="kokoro":
             chunks=[]
             with torch.inference_mode():
                 for gs,ps,data in engine(words,voice=plan["characters"][role]["voice"],speed=1,split_pattern=r"\n+"):
@@ -160,7 +222,7 @@ def main():
         process(["ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(bed),"-i",str(voices),
                  "-filter_complex","[0:a]volume=0.86[bed];[1:a]asplit=2[v][key];[bed][key]sidechaincompress=threshold=0.018:ratio=8:attack=20:release=400[duck];[duck][v]amix=inputs=2:duration=longest:normalize=0,alimiter=limit=0.85[out]",
                  "-map","[out]","-ar","48000","-ac","2","-c:a","aac","-b:a","256k","-t","90",str(out/"ENGLISH_VOICE_SFX_DRAFT_NOT_FINAL.m4a")])
-    qa={"backend":backend,"actual_hardware":hw,"gpu_used":hw["device"]!="cpu",
+    qa={"backend":backend,"actual_hardware":hw,"gpu_used":hw["device"] in ("cuda","mps","directml"),
         "film_seconds":90,"english_cues":cues,"tracks":files,
         "reference_sources":{role:hashlib.sha256(p.read_bytes()).hexdigest() for role,p in (refs or {}).items()},
         "release_approved":False,"voice_approval":"Pending human artistic and licensing review"}
