@@ -1,0 +1,52 @@
+{
+  "timeline_seconds": 90,
+  "characters": {
+    "hero": {
+      "voice": "am_michael"
+    },
+    "tape": {
+      "voice": "am_adam"
+    },
+    "doll": {
+      "voice": "af_heart"
+    }
+  },
+  "cues": [
+    [
+      "hero",
+      7.2,
+      3.45,
+      "It's just another shift. Right?"
+    ],
+    [
+      "tape",
+      22.5,
+      3.55,
+      "Don't follow the footsteps."
+    ],
+    [
+      "hero",
+      31.2,
+      2.3,
+      "Who's there?"
+    ],
+    [
+      "hero",
+      50.2,
+      2.4,
+      "Come on. Open!"
+    ],
+    [
+      "doll",
+      59,
+      4.65,
+      "The door isn't locked to keep you out."
+    ],
+    [
+      "hero",
+      71.1,
+      2.6,
+      "Then what's inside?"
+    ]
+  ]
+}

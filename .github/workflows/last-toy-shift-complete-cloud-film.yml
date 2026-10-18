@@ -1,0 +1,136 @@
+name: The Last Toy Shift — FULL 90s moving 3D film + English SFX (REVIEW)
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - '.github/workflows/last-toy-shift-complete-cloud-film.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  render-11-shots:
+    name: Scene ${{ matrix.shot.id }} (540x960 60fps)
+    runs-on: ubuntu-latest
+    timeout-minutes: 58
+    strategy:
+      fail-fast: false
+      max-parallel: 11
+      matrix:
+        shot:
+          - {id: "01", start: 0, end: 300, frames: 300}
+          - {id: "02", start: 300, end: 720, frames: 420}
+          - {id: "03", start: 720, end: 1200, frames: 480}
+          - {id: "04", start: 1200, end: 1680, frames: 480}
+          - {id: "05", start: 1680, end: 2160, frames: 480}
+          - {id: "06", start: 2160, end: 2760, frames: 600}
+          - {id: "07", start: 2760, end: 3300, frames: 540}
+          - {id: "08", start: 3300, end: 3900, frames: 600}
+          - {id: "09", start: 3900, end: 4560, frames: 660}
+          - {id: "10", start: 4560, end: 5100, frames: 540}
+          - {id: "11", start: 5100, end: 5400, frames: 300}
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore genuine original Blender-skinned Threadjaw character
+        uses: actions/download-artifact@v4
+        with:
+          name: last-toy-shift-ORIGINAL-Threadjaw-3D-and-video-NOT-FINAL
+          run-id: 39063523037
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: films/the-last-toy-shift
+      - name: Verify original skinned GLB exists
+        run: |
+          test -s public/assets/original_threadjaw_stalker.glb
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib,json,struct
+          p=Path('public/assets/original_threadjaw_stalker.glb')
+          b=p.read_bytes()
+          assert hashlib.sha256(b).hexdigest()=='46520ab77450d86f2c6445d96f2b5577dce0067ec3626c83faeb8ab87cab2391'
+          assert b[:4]==b'glTF'
+          n,code=struct.unpack_from('<II',b,12)
+          j=json.loads(b[20:20+n])
+          assert len(j.get('skins',[]))==1
+          assert len(j.get('animations',[]))>=3
+          print('PASS original Threadjaw rig, skins and three clips')
+          PY
+      - name: Install deterministic 3D renderer and software WebGL2
+        run: |
+          npm install --no-fund --no-audit
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Fetch and provider-verify genuinely licensed Poly Haven PBR materials
+        run: node scripts/acquire-cc0-pbr.mjs
+      - name: Build genuine THREE.js WebGL2 3D scene
+        run: |
+          npm run build
+          npm run validate
+      - name: Render actual THREE.js animation frames for this entire narrative scene
+        run: npm run render -- --mode=threadjaw --start=${{ matrix.shot.start }} --end=${{ matrix.shot.end }} --width=540 --height=960
+      - name: Verify exact 60 FPS H264 frame count for scene
+        run: |
+          FILE=$(find output -maxdepth 1 -name 'THREADJAW_ORIGINAL_${{ matrix.shot.frames }}FRAMES_${{ matrix.shot.start }}_${{ matrix.shot.end }}_NOT_FINAL_*.mp4' | head -1)
+          test -n "$FILE"
+          test -f "$FILE.json"
+          node scripts/check_proof.mjs "$FILE" ${{ matrix.shot.frames }}
+          printf "Verified film shot ${{ matrix.shot.id }}: %s\n" "$FILE"
+      - name: Upload scene MP4 and production metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: film-shot-${{ matrix.shot.id }}-540x960-60fps-not-final
+          path: |
+            films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*.mp4
+            films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*.mp4.json
+          if-no-files-found: error
+          retention-days: 14
+  assemble-90-second-film:
+    name: Stitch 11 scenes and the full English soundtrack
+    needs: [render-11-shots]
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all 11 scene videos and JSON records
+        uses: actions/download-artifact@v4
+        with:
+          pattern: film-shot-*
+          path: films/the-last-toy-shift/output/segments
+          merge-multiple: true
+      - name: Restore actual Kokoro 90-second, 3-character English and original SFX mix
+        uses: actions/download-artifact@v4
+        with:
+          name: the-last-toy-shift-90s-REAL-KOKORO-CLOUD-CPU-English-audition-NOT-FINAL
+          run-id: 39097760161
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: films/the-last-toy-shift/output/cloud-audio
+      - name: Install FFmpeg, verify 11 complete scenes present
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          test "$(find output/segments -maxdepth 1 -name '*.mp4' | wc -l)" -eq 11
+          test -s output/cloud-audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a
+      - name: Build complete 540p native animation plus carefully upscaled 1080p review version
+        run: node scripts/assemble_cloud_draft.mjs
+      - name: Verify exact 5400 frames, AAC and actual output hashes
+        run: |
+          test -s output/assembled/CLOUD_FILM_90S_QA_NOT_FINAL.json
+          node scripts/check_proof.mjs output/assembled/The_Last_Toy_Shift_COMPLETE_90S_540x960_60FPS_REVIEW_ONLY.mp4 5400
+          node scripts/check_proof.mjs output/assembled/The_Last_Toy_Shift_COMPLETE_90S_1080x1920_UPSCALED_DRAFT.mp4 5400
+          ffprobe -v error -show_entries format=duration:stream=codec_name,width,height,sample_rate,channels -of json output/assembled/The_Last_Toy_Shift_COMPLETE_90S_1080x1920_UPSCALED_DRAFT.mp4
+          cat output/assembled/CLOUD_FILM_90S_QA_NOT_FINAL.json
+      - name: Upload both COMPLETE actual 90-second moving film cuts and strict QC
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-last-toy-shift-COMPLETE-90s-11-shots-60fps-English-SFX-REVIEW-NOT-RELEASE
+          path: |
+            films/the-last-toy-shift/output/assembled/The_Last_Toy_Shift_COMPLETE_*.mp4
+            films/the-last-toy-shift/output/assembled/CLOUD_FILM_90S_QA_NOT_FINAL.json
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,35 @@
+name: Last Toy Shift — Windows GPU voice source checks (no personal GPU)
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - 'films/the-last-toy-shift/local-production/**'
+      - '.github/workflows/last-toy-shift-local-gpu-voice-source.yml'
+  workflow_dispatch:
+jobs:
+  check-local-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Python syntax and 90-second cue contract
+        run: |
+          python3 -m py_compile films/the-last-toy-shift/local-production/voice_gpu.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path("films/the-last-toy-shift/local-production/dialogue_plan.json").read_text())
+          assert x["timeline_seconds"] == 90
+          assert len(x["characters"]) == 3
+          assert len(x["cues"]) == 6
+          assert all(0 <= s and 0 < d and s+d <= 90 and r in x["characters"] for r,s,d,t in x["cues"])
+          assert [x[1] for x in x["cues"]] == sorted(x[1] for x in x["cues"])
+          print("PASS: 3 characters and 6 bounded English cues within 90 seconds")
+          PY
+      - name: Probe the GitHub runner CPU (NOT the user's PC or GPU)
+        run: python3 films/the-last-toy-shift/local-production/voice_gpu.py probe
+      - name: Verify private voices and local models are not committed
+        run: |
+          if git ls-files | grep -E '(^|/)(voice-references|private_model_cache|\.venv-tts)/|\.onnx$|\.safetensors$'; then
+            echo "Private voice or model committed"; exit 1
+          fi
+          echo "PASS no private source voices or weights committed"

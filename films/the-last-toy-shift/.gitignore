@@ -1,0 +1,7 @@
+node_modules/
+dist/
+output/
+public/assets/
+public/scene_manifest.json
+*.log
+.DS_Store

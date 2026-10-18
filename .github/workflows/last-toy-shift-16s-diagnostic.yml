@@ -1,0 +1,50 @@
+name: Last Toy Shift — 16s Moving 3D Diagnostic (NOT FINAL)
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/last-toy-shift-cinematic-production-20261017
+    paths:
+      - '.github/workflows/last-toy-shift-16s-diagnostic.yml'
+jobs:
+  original-webgl-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned Three.js renderer, Chromium and FFmpeg
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -qq -y ffmpeg python3-venv
+      - name: Render exactly 960 original 3D frames, 30s-46s (270x480 diagnostic ONLY)
+        run: npm run render -- --start=1800 --end=2760 --width=270 --height=480
+      - name: Generate original non-dialogue atmosphere
+        run: |
+          python3 -m venv .venv
+          .venv/bin/pip install -q numpy
+          .venv/bin/python scripts/sound-bed.py --seconds 16 --offset 30 --out output/diagnostic_ambient_16s.wav
+      - name: Mux original atmospheric WAV into technical diagnostic
+        run: |
+          VIDEO=$(find output -type f -name 'TECHNICAL_960FRAMES_1800_2760_NOT_FINAL_*.mp4' | head -1)
+          test -n "$VIDEO"
+          node scripts/check_proof.mjs "$VIDEO" 960
+          ffmpeg -hide_banner -loglevel error -y -i "$VIDEO" -i output/diagnostic_ambient_16s.wav -map 0:v:0 -map 1:a:0 -c:v copy -c:a aac -ar 48000 -b:a 192k -shortest output/DIAGNOSTIC_16S_LOWRES_WITH_ORIGINAL_AMBIENCE_NOT_FINAL.mp4
+          node scripts/check_proof.mjs output/DIAGNOSTIC_16S_LOWRES_WITH_ORIGINAL_AMBIENCE_NOT_FINAL.mp4 960
+          ffprobe -v error -show_entries stream=codec_type,codec_name,sample_rate,width,height -show_entries format=duration -of json output/DIAGNOSTIC_16S_LOWRES_WITH_ORIGINAL_AMBIENCE_NOT_FINAL.mp4
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-toy-shift-16s-original-moving-3d-diagnostic-NOT-FINAL
+          path: |
+            films/the-last-toy-shift/output/DIAGNOSTIC_16S_LOWRES_WITH_ORIGINAL_AMBIENCE_NOT_FINAL.mp4
+            films/the-last-toy-shift/output/TECHNICAL_960FRAMES_1800_2760_NOT_FINAL_*.mp4
+          if-no-files-found: ignore
+          retention-days: 7

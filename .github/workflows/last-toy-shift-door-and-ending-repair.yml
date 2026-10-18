@@ -1,0 +1,66 @@
+name: Last Toy Shift — Replace 3 Broken Door / Reveal Camera Scenes
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths: ['.github/workflows/last-toy-shift-door-and-ending-repair.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  repaired-3d-scenes:
+    name: Repaired Scene ${{ matrix.shot.id }} at 60fps
+    runs-on: ubuntu-latest
+    timeout-minutes: 58
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        shot:
+          - {id: "07", start: 2760, end: 3300, frames: 540}
+          - {id: "08", start: 3300, end: 3900, frames: 600}
+          - {id: "10", start: 4560, end: 5100, frames: 540}
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recover original skinned Threadjaw rig
+        uses: actions/download-artifact@v4
+        with:
+          name: last-toy-shift-ORIGINAL-Threadjaw-3D-and-video-NOT-FINAL
+          run-id: 39063523037
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: films/the-last-toy-shift
+      - name: Verify original creature
+        run: |
+          test -s public/assets/original_threadjaw_stalker.glb
+          sha256sum public/assets/original_threadjaw_stalker.glb | grep '^46520ab77450d86f2c6445d96f2b5577dce0067ec3626c83faeb8ab87cab2391'
+      - name: Install Three.js software renderer
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Verify provider-licensed realistic factory surfaces
+        run: node scripts/acquire-cc0-pbr.mjs
+      - name: Build source and validate strict story timeline
+        run: |
+          npm run build
+          npm run validate
+      - name: Re-render fixed 540x960 60fps original motion
+        run: npm run render -- --mode=threadjaw --start=${{ matrix.shot.start }} --end=${{ matrix.shot.end }} --width=540 --height=960
+      - name: Independently verify actual frame counts
+        run: |
+          FILE=$(find output -maxdepth 1 -name 'THREADJAW_ORIGINAL_${{ matrix.shot.frames }}FRAMES_${{ matrix.shot.start }}_${{ matrix.shot.end }}_NOT_FINAL_*.mp4' | head -1)
+          test -n "$FILE"
+          node scripts/check_proof.mjs "$FILE" ${{ matrix.shot.frames }}
+      - name: Preserve repaired video and metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: repaired-film-shot-${{ matrix.shot.id }}-540x960-60fps-not-final
+          path: |
+            films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*.mp4
+            films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*.mp4.json
+          if-no-files-found: error
+          retention-days: 14

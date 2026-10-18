@@ -1,0 +1,58 @@
+name: The Last Toy Shift — 3D Source Gate
+on:
+  push:
+    branches:
+      - feature/last-toy-shift-cinematic-production-20261017
+  pull_request:
+    paths:
+      - 'films/the-last-toy-shift/**'
+      - 'templates/fan-animation/**'
+      - '.github/workflows/last-toy-shift-build.yml'
+jobs:
+  compile-and-plan-check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned app dependencies
+        run: npm install --no-audit --no-fund
+      - name: TypeScript and Vite build
+        run: npm run build
+      - name: Structural 5400-frame check (NOT media proof)
+        run: npm run validate
+  webgl-smoke:
+    needs: compile-and-plan-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    if: github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install renderer and browser
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          ffmpeg -version | head -1
+      - name: Real WebGL render smoke (60 distinct indexed frames, ORIGINAL stand-ins only)
+        run: npm run render -- --start=1800 --end=1860 --width=270 --height=480
+      - name: Confirm actual encoded H264 frames
+        run: node scripts/check_proof.mjs $(find output -type f -name 'TECHNICAL_60FRAMES_1800_1860_NOT_FINAL_*.mp4' | head -1) 60
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: last-toy-shift-3d-smoke-not-final
+          path: films/the-last-toy-shift/output/*.mp4
+          if-no-files-found: ignore
+          retention-days: 7

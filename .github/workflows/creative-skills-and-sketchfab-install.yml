@@ -1,0 +1,77 @@
+name: Creative Skills 55 + Blender 16 + Sketchfab 1.8.0 install validation
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - 'toolchains/creative-animation-skills/**'
+      - '.github/workflows/creative-skills-and-sketchfab-install.yml'
+  workflow_dispatch:
+jobs:
+  skills-and-sketchfab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Python and Git
+        run: |
+          python3 --version
+          git --version
+      - name: Pin-verified copies of 55 iart motion skills and ChatGPT private-plugin archive
+        run: python3 toolchains/creative-animation-skills/install.py package --output dist/creative-skills
+      - name: Install all 71 upstream skills into disposable agent workspace
+        run: |
+          python3 toolchains/creative-animation-skills/install.py install --project "$RUNNER_TEMP/creative-agents" --hosts codex
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['RUNNER_TEMP'])/'creative-agents'
+          report=json.loads((root/'creative-skill-install-audit.json').read_text())
+          files=list((root/'.agents/skills').glob('*/SKILL.md'))
+          assert len(files)==71,(len(files),report)
+          assert report['motion']==55 and report['blender']==16
+          print('PASS: 71 agent skills installed in isolated workspace (not user desktop)')
+          PY
+      - name: Download official Sketchfab Blender 1.8.0 ZIP and verify published SHA256
+        run: |
+          curl --fail --location --retry 3 --output dist/creative-skills/sketchfab-plugin-1-8-0.zip \
+            https://github.com/sketchfab/blender-plugin/releases/download/1.8.0/sketchfab-plugin-1-8-0.zip
+          echo 'a6be9e8348a67b66faa236c7aba4c4980db0bda76ab5db17eddd077f66ca71d7  dist/creative-skills/sketchfab-plugin-1-8-0.zip' | sha256sum --check -
+          python3 - <<'PY'
+          from pathlib import PurePosixPath,Path
+          import zipfile
+          p=Path('dist/creative-skills/sketchfab-plugin-1-8-0.zip')
+          assert p.stat().st_size==54322
+          with zipfile.ZipFile(p) as z:
+            bad=[n for n in z.namelist() if '..' in PurePosixPath(n).parts or PurePosixPath(n).is_absolute()]
+            assert not bad,bad
+            assert any(n.endswith('__init__.py') for n in z.namelist())
+            print('PASS: safe-path official Sketchfab add-on ZIP',len(z.namelist()),'members')
+          PY
+      - name: Test official Sketchfab plugin install in disposable Blender runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender python3-numpy
+          blender --version | head -3
+          blender --background --factory-startup --python toolchains/creative-animation-skills/install_sketchfab_blender.py -- --zip "$PWD/dist/creative-skills/sketchfab-plugin-1-8-0.zip"
+      - name: Preserve checksums and local-install instructions
+        run: |
+          python3 - <<'PY'
+          import json,hashlib,pathlib
+          root=pathlib.Path('dist/creative-skills')
+          assets=[]
+          for p in sorted(root.glob('*.zip')):
+            assets.append({'file':p.name,'size':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
+          (root/'package-sha256.json').write_text(json.dumps(assets,indent=2)+'\n')
+          print(json.dumps(assets,indent=2))
+          PY
+      - name: Export official source / plugin package and verification manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: creative-motion-55-and-sketchfab-1-8-0-verified-install-pack
+          path: |
+            dist/creative-skills/creative-motion-skills-55.zip
+            dist/creative-skills/sketchfab-plugin-1-8-0.zip
+            dist/creative-skills/install_audit.json
+            dist/creative-skills/package-sha256.json
+          if-no-files-found: error
+          retention-days: 14

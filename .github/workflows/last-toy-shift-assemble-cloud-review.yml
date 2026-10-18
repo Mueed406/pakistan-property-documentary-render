@@ -1,0 +1,75 @@
+name: The Last Toy Shift — Assemble Existing 11 Cloud Shots into 90s Film
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths: ['.github/workflows/last-toy-shift-assemble-cloud-review.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  assemble-original-shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 58
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for eleven actual rendered shot artifacts in GitHub film run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 180); do
+            COUNT=$(gh api repos/Mueed406/pakistan-property-documentary-render/actions/runs/39098919788/artifacts --jq '[.artifacts[] | select(.name | startswith("film-shot-"))] | length')
+            echo "Real rendered scenes uploaded: $COUNT / 11 (poll $i)"
+            if [ "$COUNT" = 11 ]; then exit 0; fi
+            sleep 12
+          done
+          echo "FAIL not all 11 scenes rendered after polling" >&2
+          exit 1
+      - name: Download 11 real scene videos from prior cloud render run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39098919788
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: film-shot-*
+          merge-multiple: true
+          path: films/the-last-toy-shift/output/segments
+      - name: Download verified complete English voices plus original SFX
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39097760161
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: the-last-toy-shift-90s-REAL-KOKORO-CLOUD-CPU-English-audition-NOT-FINAL
+          path: films/the-last-toy-shift/output/cloud-audio
+      - name: Validate no extra model-build proof was mistakenly included with film shots
+        run: |
+          set -e
+          find output/segments -maxdepth 1 -name 'THREADJAW_ORIGINAL_120FRAMES_1800_1920_NOT_FINAL_*' -delete
+          test "$(find output/segments -maxdepth 1 -type f -name '*.mp4' | wc -l)" -eq 11
+          test "$(find output/segments -maxdepth 1 -type f -name '*.mp4.json' | wc -l)" -eq 11
+          test -s output/cloud-audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a
+          echo "PASS exactly 11 scene MP4, 11 matching QC files, one actual 90s voice/SFX mix"
+      - name: Install assembly and video validation tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Assemble 540x960 real 3D film and upscaled 1080x1920 60fps review
+        run: node scripts/assemble_cloud_draft.mjs
+      - name: Strict frame, soundtrack, duration and sha metadata checks
+        run: |
+          node scripts/check_proof.mjs output/assembled/The_Last_Toy_Shift_COMPLETE_90S_540x960_60FPS_REVIEW_ONLY.mp4 5400
+          node scripts/check_proof.mjs output/assembled/The_Last_Toy_Shift_COMPLETE_90S_1080x1920_UPSCALED_DRAFT.mp4 5400
+          test -s output/assembled/CLOUD_FILM_90S_QA_NOT_FINAL.json
+          ffprobe -v error -show_entries stream=width,height,nb_frames,codec_name,sample_rate,channels:format=duration -of json output/assembled/The_Last_Toy_Shift_COMPLETE_90S_1080x1920_UPSCALED_DRAFT.mp4
+      - name: Save complete 90s movie as downloadable GitHub artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: The-Last-Toy-Shift-90S-5400-FRAMES-VOICE-SFX-FULL-REVIEW-MP4
+          path: |
+            films/the-last-toy-shift/output/assembled/The_Last_Toy_Shift_COMPLETE_*.mp4
+            films/the-last-toy-shift/output/assembled/CLOUD_FILM_90S_QA_NOT_FINAL.json
+          if-no-files-found: error
+          retention-days: 14
