@@ -47,6 +47,12 @@ jobs:
             assert any(n.endswith('__init__.py') for n in z.namelist())
             print('PASS: safe-path official Sketchfab add-on ZIP',len(z.namelist()),'members')
           PY
+      - name: Test official Sketchfab plugin install in disposable Blender runner
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender python3-numpy
+          blender --version | head -3
+          blender --background --factory-startup --python toolchains/creative-animation-skills/install_sketchfab_blender.py -- --zip "$PWD/dist/creative-skills/sketchfab-plugin-1-8-0.zip"
       - name: Preserve checksums and local-install instructions
         run: |
           python3 - <<'PY'
