@@ -261,6 +261,7 @@ for(const x of [-2.7,2.7]){
  const m=box(.3,4.7,8,x,2.35,-38.6,concrete);safePanels.push(m);
 }
 const safetyLight=new THREE.PointLight(0xf1c57b,0,9);safetyLight.position.set(0,4,-38);scene.add(safetyLight);
+const stalkerRevealLight=new THREE.PointLight(0x75b9f8,0,9);stalkerRevealLight.position.set(1.6,3.5,-37);scene.add(stalkerRevealLight);
 
 // Dust points (true 3D positional parallax).
 const pointPositions=new Float32Array(1800);
@@ -391,6 +392,8 @@ function renderFrame(frame:number){
  creature.legs[0].rotation.x=-gait*.48;
  creature.legs[1].rotation.x=gait*.48;
  creature.rig.rotation.y=index===9?Math.PI:0;
+ stalkerRevealLight.position.copy(creature.rig.position).add(vec(1.2,3.8,2.6));
+ stalkerRevealLight.intensity=index===9?22*smooth((u-.38)*4):0;
  if(importedModels[0]){importedModels[0].position.copy(creature.rig.position);importedModels[0].rotation.y=creature.rig.rotation.y;importedModels[0].visible=index===4||index===5||index===9;}
  if(index===5)camera.lookAt(creature.rig.position.clone().add(vec(0,2.05,0)));
  if(index===9 && u>.52){
