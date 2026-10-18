@@ -1,0 +1,130 @@
+name: Last Toy Shift — FULL 90-second Moving 3D Film WORKPRINT (11 Cloud Jobs)
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths:
+      - '.github/workflows/last-toy-shift-full-90s-cloud-workprint.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  real-3d-scenes:
+    name: "Render ${{ matrix.id }} ${{ matrix.start }}-${{ matrix.end }}"
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      max-parallel: 11
+      matrix:
+        include:
+          - {id: shot_01, start: 0, end: 300}
+          - {id: shot_02, start: 300, end: 720}
+          - {id: shot_03, start: 720, end: 1200}
+          - {id: shot_04, start: 1200, end: 1680}
+          - {id: shot_05, start: 1680, end: 2160}
+          - {id: shot_06, start: 2160, end: 2760}
+          - {id: shot_07, start: 2760, end: 3300}
+          - {id: shot_08, start: 3300, end: 3900}
+          - {id: shot_09, start: 3900, end: 4560}
+          - {id: shot_10, start: 4560, end: 5100}
+          - {id: shot_11, start: 5100, end: 5400}
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install actual Blender, original model dependencies, FFmpeg, WebGL2 Chromium
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq blender python3-numpy ffmpeg
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Generate original skinned plush 3D actor and verified CC0 materials
+        run: |
+          blender --background --factory-startup --python scripts/blender_make_threadjaw.py > output_threadjaw_builder.log 2>&1 || (tail -100 output_threadjaw_builder.log && exit 1)
+          node scripts/acquire-cc0-pbr.mjs
+          node scripts/sync-manifest.mjs
+          npm run build
+      - name: Render EVERY unique actual 60fps WebGL2 frame in the shot
+        run: |
+          npm run render -- --mode=threadjaw --start=${{ matrix.start }} --end=${{ matrix.end }} --width=360 --height=640
+      - name: Validate exact 60fps frame count and preserve authoritative metadata
+        run: |
+          python3 - <<'PY'
+          import glob, subprocess,json,os
+          start=int(os.environ["START"]);end=int(os.environ["END"])
+          pattern="output/THREADJAW_ORIGINAL_%dFRAMES_%d_%d_NOT_FINAL_*.mp4"%(end-start,start,end)
+          files=glob.glob(pattern)
+          assert len(files)==1,files
+          movie=files[0]
+          data=json.loads(open(movie+".json").read())
+          assert data["frames"]==end-start and data["start"]==start and data["end"]==end
+          assert data["mode"]=="threadjaw-original" and data["rights_release_authorized"] is False
+          subprocess.run(["node","scripts/check_proof.mjs",movie,str(end-start)],check=True)
+          print("CLOUD PASS, real rendered frames",end-start,"shot",os.environ["SHOT"])
+          PY
+        env:
+          START: ${{ matrix.start }}
+          END: ${{ matrix.end }}
+          SHOT: ${{ matrix.id }}
+      - name: Store this shot with rendering metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: lasttoy90-shot-${{ matrix.id }}
+          path: |
+            films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*_NOT_FINAL_*.mp4
+            films/the-last-toy-shift/output/THREADJAW_ORIGINAL_*_NOT_FINAL_*.mp4.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 2
+  assemble-all-scenes:
+    name: Full 90s 5400 frames + cloud English SFX assembly and QA
+    needs: [real-3d-scenes]
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Download all 11 original moving 3D shots and frame metadata
+        uses: actions/download-artifact@v4
+        with:
+          pattern: lasttoy90-shot-*
+          merge-multiple: true
+          path: films/the-last-toy-shift/output
+      - name: Restore verified prior FULL 90s real cloud Kokoro English soundtrack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p audio
+          gh run download 39097760161 --repo ${{ github.repository }} \
+            -n the-last-toy-shift-90s-REAL-KOKORO-CLOUD-CPU-English-audition-NOT-FINAL \
+            -D audio
+          test -f audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a
+          echo '4e9054332da14b9c1789d666bea4934860defedb5c46a8bf69b1c5cc587f3be7  audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a' | sha256sum --check -
+      - name: Strict FFprobe all 5400 unique motion frames, mux full audio, upscale for viewing
+        run: |
+          node scripts/assemble_workprint.mjs --audio=audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a
+          ls -lh output/THE_LAST_TOY_SHIFT_FULL_90S_*.mp4
+      - name: Publish playable full movie workprints and QA (NOT release final)
+        uses: actions/upload-artifact@v4
+        with:
+          name: THE-LAST-TOY-SHIFT-FULL-90S-ENGLISH-MOVING-3D-WORKPRINT-NOT-FINAL
+          path: |
+            films/the-last-toy-shift/output/THE_LAST_TOY_SHIFT_FULL_90S_*.mp4
+            films/the-last-toy-shift/output/FULL_90S_WORKPRINT_QA.json
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
