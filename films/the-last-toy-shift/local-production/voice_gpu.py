@@ -17,7 +17,22 @@ def hardware():
         import torch
         torch.set_num_threads(min(8,max(1,os.cpu_count() or 1)))
         if torch.cuda.is_available():
-            return {"device":"cuda","name":torch.cuda.get_device_name(0),"vram_gb":round(torch.cuda.get_device_properties(0).total_memory/2**30,2),"torch":torch.__version__}
+            # Quadro Maxwell and some older cards can be visible to the driver
+            # but unsupported by recently built CUDA PyTorch kernels.
+            try:
+                test=torch.ones((32,32),device="cuda")
+                checksum=float((test@test).sum().item())
+                torch.cuda.synchronize()
+                if checksum<=0:raise RuntimeError("Invalid CUDA computation")
+                return {"device":"cuda","name":torch.cuda.get_device_name(0),
+                        "compute_capability":list(torch.cuda.get_device_capability(0)),
+                        "compiled_cuda_arches":torch.cuda.get_arch_list(),
+                        "vram_gb":round(torch.cuda.get_device_properties(0).total_memory/2**30,2),
+                        "cuda_kernel_smoke":"PASS","torch":torch.__version__}
+            except Exception as exc:
+                return {"device":"cpu","name":"GPU present but CUDA PyTorch compute failed",
+                        "cuda_kernel_smoke":"FAIL","failure":str(exc),
+                        "torch":torch.__version__,"vram_gb":None}
         if getattr(torch.backends,"mps",None) and torch.backends.mps.is_available():
             return {"device":"mps","name":"Apple Metal","vram_gb":None,"torch":torch.__version__}
         return {"device":"cpu","name":"CPU","vram_gb":None,"torch":torch.__version__}
