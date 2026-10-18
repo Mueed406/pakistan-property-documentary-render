@@ -391,15 +391,21 @@ function renderFrame(frame:number){
  creature.arms[1].rotation.x=-gait*.65;
  creature.legs[0].rotation.x=-gait*.48;
  creature.legs[1].rotation.x=gait*.48;
- creature.rig.rotation.y=index===9?Math.PI:0;
+ creature.rig.rotation.y=0; // Keep the stalker's real face oriented toward the viewer in the ending
  stalkerRevealLight.position.copy(creature.rig.position).add(vec(1.2,3.8,2.6));
- stalkerRevealLight.intensity=index===9?22*smooth((u-.38)*4):0;
+ stalkerRevealLight.intensity=index===9?9*smooth((u-.38)*4):0;
  if(importedModels[0]){importedModels[0].position.copy(creature.rig.position);importedModels[0].rotation.y=creature.rig.rotation.y;importedModels[0].visible=index===4||index===5||index===9;}
  if(index===5)camera.lookAt(creature.rig.position.clone().add(vec(0,2.05,0)));
- if(index===9 && u>.52){
-  // Late over-the-shoulder reveal: camera physically turns to face the
-  // pursuer rather than staring at the closed security door.
-  camera.lookAt(creature.rig.position.clone().add(vec(0,2.1,0)));
+ if(index===9){
+  // Reveal the ACTUAL FACE from a safe 4.8–6.3 meter tracking distance,
+  // never cross through the animated plush skinned mesh.
+  const reveal=smooth((u-.39)/.23);
+  const distance=6.3-1.5*smooth((u-.55)*2.2);
+  const targetPosition=creature.rig.position.clone().add(vec(.65,1.92,distance));
+  camera.position.lerp(targetPosition,reveal);
+  const originalLook=new THREE.Vector3(...stages[index].look);
+  const monsterFocus=creature.rig.position.clone().add(vec(0,2.35,0));
+  camera.lookAt(originalLook.lerp(monsterFocus,reveal));
  }
  doorGroup.visible=true;
  slidingDoor.position.x=index>=8?3.0*smooth((t-65)/1.5):0;
