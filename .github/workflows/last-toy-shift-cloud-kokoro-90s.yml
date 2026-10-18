@@ -1,0 +1,67 @@
+name: Last Toy Shift — 90s REAL Cloud Kokoro English Voices (NOT FINAL)
+on:
+  push:
+    branches:
+      - feature/last-toy-shift-cinematic-production-20261017
+    paths:
+      - '.github/workflows/last-toy-shift-cloud-kokoro-90s.yml'
+      - 'films/the-last-toy-shift/local-production/cloud_kokoro_90s.py'
+      - 'films/the-last-toy-shift/local-production/dialogue_plan.json'
+  workflow_dispatch:
+jobs:
+  genuine-cloud-cpu-voice:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: films/the-last-toy-shift/local-production/cloud-requirements.txt
+      - name: Install open-source Kokoro ONNX and 48kHz audio production
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+          python -m pip install --disable-pip-version-check -r local-production/cloud-requirements.txt
+      - name: Cache verified public Kokoro model weights (non-private)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/the-last-toy-shift/kokoro-onnx
+          key: public-kokoro-onnx-v1.0-beb0d184-bca610b8
+      - name: Real synthesizer — download verify and synthesize six English lines
+        run: |
+          python local-production/cloud_kokoro_90s.py --output output/cloud-kokoro
+      - name: Verify AAC, WAV and film-cue QA; do not represent it as final film
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import wave,json,subprocess
+          root=Path("output/cloud-kokoro")
+          qa=json.loads((root/"CLOUD_TTS_QA.json").read_text())
+          assert qa["result"]=="pass-engineering-draft" and len(qa["cues"])==6
+          assert qa["onnx_inference_providers"]==["CPUExecutionProvider"]
+          assert qa["final_film"] is False and qa["human_voice_acting_approved"] is False
+          for who in ("HERO","TAPE","DOLL"):
+            f=root/f"ENGLISH_{who}_90S_CLOUD_CPU_DRAFT.wav"
+            with wave.open(str(f)) as w:
+              assert w.getframerate()==48000 and w.getnframes()==4320000
+              assert w.getnchannels()==2
+          print("PASS 3 separate real TTS roles, 6 speech cues, 90s WAVs, CPU provider and release gate")
+          PY
+          ffprobe -v error -show_entries format=duration:stream=codec_name,sample_rate,channels -of json output/cloud-kokoro/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a
+          ffmpeg -hide_banner -v info -i output/cloud-kokoro/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a -af volumedetect -f null - 2>&1 | tail -n 15
+      - name: Upload full original voice stems, caption timing and 90s mixed audition
+        uses: actions/upload-artifact@v4
+        with:
+          name: the-last-toy-shift-90s-REAL-KOKORO-CLOUD-CPU-English-audition-NOT-FINAL
+          path: |
+            films/the-last-toy-shift/output/cloud-kokoro/*.m4a
+            films/the-last-toy-shift/output/cloud-kokoro/*.wav
+            films/the-last-toy-shift/output/cloud-kokoro/*.srt
+            films/the-last-toy-shift/output/cloud-kokoro/CLOUD_TTS_QA.json
+          if-no-files-found: error
+          retention-days: 14
