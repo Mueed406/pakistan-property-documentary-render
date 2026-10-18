@@ -67,9 +67,14 @@ if(Number(v?.nb_read_frames)!==5400||Math.abs(Number(full.format.duration)-90)>.
  throw Error('Assembled workprint failed exact 90s/5400 frame QA');
 const upscaled='output/THE_LAST_TOY_SHIFT_FULL_90S_1080X1920_UPSCALED_WORKPRINT_NOT_FINAL.mp4';
 if(args.get('upscale')!=='false'){
+ const suppliedSrt=args.get('srt');
+ const baseFilter='scale=1080:1920:flags=lanczos,setsar=1,eq=contrast=1.06:brightness=0.009:saturation=1.06:gamma=1.03,unsharp=5:5:0.22:3:3:0';
+ const subtitlesStyle="FontName=DejaVu Sans,Fontsize=9,PrimaryColour=&H00FFFFFF,OutlineColour=&H00202020,BackColour=&H80000000,BorderStyle=3,Outline=1,Shadow=0,Alignment=2,MarginV=28";
+ if(suppliedSrt&&!existsSync(suppliedSrt))throw Error('The actual TTS cue timing SRT was not found: '+suppliedSrt);
+ const videoFilter=suppliedSrt?baseFilter+",subtitles="+suppliedSrt+":force_style='"+subtitlesStyle+"'":baseFilter;
  ff(['-i',direct,'-map','0:v:0','-map','0:a:0',
-  '-vf','scale=1080:1920:flags=lanczos,setsar=1',
-  '-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p',
+  '-vf',videoFilter,
+  '-c:v','libx264','-preset','superfast','-crf','21','-pix_fmt','yuv420p',
   '-r','60','-c:a','copy','-movflags','+faststart',upscaled]);
  const probe=ffprobe(upscaled), video=probe.streams.find(s=>s.codec_type==='video');
  if(video.width!==1080||video.height!==1920||Number(video.nb_read_frames)!==5400||
@@ -81,6 +86,7 @@ const qa={status:'TECHNICALLY COMPLETE FULL 90-SECOND WORKPRINT, ARTISTIC GATE N
  scenes:entries,first_shot_fingerprint:sourceFingerprint,git_source_sha:process.env.GITHUB_SHA||null,
  audio_sha256:audioSha,audio_source:'verified preexisting Kokoro original English/SFX full soundtrack',
  direct_sha256:createHash('sha256').update(readFileSync(direct)).digest('hex'),
+ burned_in_subtitles:args.get('srt')||null,
  upscale_sha256:existsSync(upscaled)?createHash('sha256').update(readFileSync(upscaled)).digest('hex'):null,
  limitations:'Unapproved creature quality/scene blocking; primitive toy stand-ins, not final cinematic rig acting, source only 360p, soundtrack audition TTS and scripted SFX, noncanon fan rights review required.'};
 writeFileSync('output/FULL_90S_WORKPRINT_QA.json',JSON.stringify(qa,null,2)+'\n');
