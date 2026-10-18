@@ -320,10 +320,10 @@ const stages=[
  {from:[1.5,1.8,-11.8],to:[1.45,1.65,-12.8],look:[1.4,1.55,-14],fov:38},
  {from:[0,1.9,-16],to:[0,1.85,-21],look:[0,2.3,-30],fov:54},
  {from:[-.9,1.36,-19.5],to:[.6,1.55,-12.5],look:[0,2.2,-26],fov:54},
- {from:[.7,1.78,-26],to:[.1,1.8,-29.5],look:[0,2,-32],fov:53},
- {from:[1.5,1.8,-28.4],to:[-1.3,1.8,-29.5],look:[.2,2,-32],fov:45},
+ {from:[1.25,1.88,-23.4],to:[-.9,1.75,-26],look:[0,2,-32],fov:59},
+ {from:[-1.25,1.82,-24.6],to:[1.8,1.92,-23.9],look:[0,2,-32],fov:63},
  {from:[0,1.65,-34.6],to:[0,1.72,-39],look:[0,2,-41],fov:61},
- {from:[.5,1.72,-39],to:[-.35,1.8,-34.5],look:[0,2,-32],fov:74},
+ {from:[.6,1.72,-37.8],to:[-.25,1.81,-34.4],look:[0,2,-32],fov:63},
  {from:[0,1.7,-33],to:[0,1.7,-32.8],look:[0,2,-34],fov:50}
 ] as const;
 const slate=document.getElementById('slate')!;
@@ -393,6 +393,11 @@ function renderFrame(frame:number){
  creature.rig.rotation.y=index===9?Math.PI:0;
  if(importedModels[0]){importedModels[0].position.copy(creature.rig.position);importedModels[0].rotation.y=creature.rig.rotation.y;importedModels[0].visible=index===4||index===5||index===9;}
  if(index===5)camera.lookAt(creature.rig.position.clone().add(vec(0,2.05,0)));
+ if(index===9 && u>.52){
+  // Late over-the-shoulder reveal: camera physically turns to face the
+  // pursuer rather than staring at the closed security door.
+  camera.lookAt(creature.rig.position.clone().add(vec(0,2.1,0)));
+ }
  doorGroup.visible=true;
  slidingDoor.position.x=index>=8?3.0*smooth((t-65)/1.5):0;
  lockLight.intensity=index===6?(3+5*(Math.sin(t*14)>.5?1:0)):index===7?2:0;
