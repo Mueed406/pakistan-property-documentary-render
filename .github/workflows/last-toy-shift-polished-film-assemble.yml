@@ -1,0 +1,98 @@
+name: Last Toy Shift — Assemble Repaired 3 Scenes into Complete 90s V2
+on:
+  push:
+    branches: [feature/last-toy-shift-cinematic-production-20261017]
+    paths: ['.github/workflows/last-toy-shift-polished-film-assemble.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  complete-patched-film:
+    runs-on: ubuntu-latest
+    timeout-minutes: 58
+    defaults:
+      run:
+        working-directory: films/the-last-toy-shift
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wait for all 3 repaired real 3D video artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 180); do
+            COUNT=$(gh api repos/Mueed406/pakistan-property-documentary-render/actions/runs/39100104623/artifacts --jq '[.artifacts[] | select(.name | startswith("repaired-film-shot-"))] | length')
+            echo "Repaired scene artifacts ready: $COUNT / 3"
+            if [ "$COUNT" -eq 3 ]; then exit 0; fi
+            sleep 12
+          done
+          echo "Timed out waiting for three revised scenes" >&2
+          exit 1
+      - name: Get original 11 cloud-rendered 3D scenes
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39098919788
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: film-shot-*
+          merge-multiple: true
+          path: films/the-last-toy-shift/output/base
+      - name: Get revised security-door, doll and stalker ending camera scenes
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39100104623
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          pattern: repaired-film-shot-*
+          merge-multiple: true
+          path: films/the-last-toy-shift/output/repaired
+      - name: Retrieve unchanged 90s 3-character Kokoro + Foley + suspense music
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 39097760161
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: the-last-toy-shift-90s-REAL-KOKORO-CLOUD-CPU-English-audition-NOT-FINAL
+          path: films/the-last-toy-shift/output/cloud-audio
+      - name: Select exactly one correct video/metadata pair for each story scene
+        run: |
+          python3 - <<'PY'
+          import json,shutil
+          from pathlib import Path
+          p=json.loads(Path('../../templates/fan-animation/poppy_90s_scene_manifest.json').read_text())
+          target=Path('output/segments')
+          target.mkdir(parents=True,exist_ok=True)
+          fixed={'shot_07','shot_08','shot_10'}
+          for sh in p['shots']:
+            src=Path('output/repaired' if sh['id'] in fixed else 'output/base')
+            a=sh['start_frame'];b=sh['end_frame_exclusive']
+            prefix=f'THREADJAW_ORIGINAL_{b-a}FRAMES_{a}_{b}_NOT_FINAL_'
+            files=list(src.glob(prefix+'*.mp4'))
+            assert len(files)==1,(sh['id'],src,files)
+            assert Path(str(files[0])+'.json').exists()
+            shutil.copyfile(files[0],target/files[0].name)
+            shutil.copyfile(Path(str(files[0])+'.json'),target/(files[0].name+'.json'))
+            print('PATCH' if sh['id'] in fixed else 'PRESERVE',sh['id'],files[0].name)
+          assert len(list(target.glob('*.mp4')))==11
+          assert len(list(target.glob('*.mp4.json')))==11
+          print('PASS exact 8 original + 3 improved shots')
+          PY
+          test -s output/cloud-audio/LAST_TOY_SHIFT_90S_ENGLISH_SFX_CLOUD_CPU_AUDITION_NOT_FINAL.m4a
+      - name: Install FFmpeg for true H264/AAC frame-locked assembly
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg
+      - name: Produce revised 90s 5,400-frame review and 1080p upscale
+        run: node scripts/assemble_cloud_draft.mjs
+      - name: Objective 5400-frame and audio verification
+        run: |
+          node scripts/check_proof.mjs output/assembled/The_Last_Toy_Shift_COMPLETE_90S_540x960_60FPS_REVIEW_ONLY.mp4 5400
+          node scripts/check_proof.mjs output/assembled/The_Last_Toy_Shift_COMPLETE_90S_1080x1920_UPSCALED_DRAFT.mp4 5400
+          cat output/assembled/CLOUD_FILM_90S_QA_NOT_FINAL.json
+      - name: Upload improved full film v2 and QA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Last-Toy-Shift-90S-V2-Door-Camera-Repairs-1080p-Upscaled-60fps
+          path: |
+            films/the-last-toy-shift/output/assembled/The_Last_Toy_Shift_COMPLETE_*.mp4
+            films/the-last-toy-shift/output/assembled/CLOUD_FILM_90S_QA_NOT_FINAL.json
+          if-no-files-found: error
+          retention-days: 14
