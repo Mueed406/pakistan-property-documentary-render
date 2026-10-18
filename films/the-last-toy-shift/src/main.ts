@@ -391,7 +391,7 @@ function renderFrame(frame:number){
  creature.legs[0].rotation.x=-gait*.48;
  creature.legs[1].rotation.x=gait*.48;
  creature.rig.rotation.y=index===9?Math.PI:0;
- if(importedModels[0]){importedModels[0].position.copy(creature.rig.position);importedModels[0].rotation.y=creature.rig.rotation.y;}
+ if(importedModels[0]){importedModels[0].position.copy(creature.rig.position);importedModels[0].rotation.y=creature.rig.rotation.y;importedModels[0].visible=index===4||index===5||index===9;}
  if(index===5)camera.lookAt(creature.rig.position.clone().add(vec(0,2.05,0)));
  doorGroup.visible=true;
  slidingDoor.position.x=index>=8?3.0*smooth((t-65)/1.5):0;
