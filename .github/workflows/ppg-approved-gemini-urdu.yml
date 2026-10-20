@@ -1,0 +1,46 @@
+name: PPG Approved Gemini Urdu Full Voice
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  generate_authorized_voice:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PYTHONUTF8: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install sound utilities
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          python -m pip install requests
+      - name: Validate voice plan without API requests
+        run: python gemini_full_voice.py --plan --max-chunks 40
+      - name: Confirm configured secret
+        run: |
+          test -n "$GEMINI_API_KEY" || (echo "Gemini API key is not available. No calls performed."; exit 1)
+      - name: Generate narration — authorized original Urdu script only, no paid fallback
+        run: python -u gemini_full_voice.py --max-chunks 40
+      - name: Validate generated Urdu master audio
+        run: |
+          test -s urdu_voice_gemini.wav
+          test -s urdu_timed_gemini_review.srt
+          ffprobe -v error -show_format -show_streams urdu_voice_gemini.wav > /dev/null
+      - name: Save actual generated audio, timestamps and review transcript
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PPG-Gemini-Pakistani-Urdu-Full-Narration-Review
+          path: |
+            urdu_voice_gemini.wav
+            urdu_timed_gemini_review.srt
+            voice_cue_times_gemini.json
+          retention-days: 7
+          if-no-files-found: error
